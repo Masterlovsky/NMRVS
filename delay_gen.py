@@ -9,6 +9,7 @@ import pandas as pd
 import os
 
 ENS_HOME = "/home/resolution/ens/"
+SIMULATION_HOME = "/home/resolution/ens/"
 
 
 class Remote(object):
@@ -161,6 +162,8 @@ def getInputMsgFromFile(file) -> list:
 
 
 def handle(input_msgs, delay_path="./"):
+    simulationFlag = False
+    initSimulation(delay_path)
     config_nodes = set()
     output = delay_path + "delay.txt"
     f = open(output, 'w')
@@ -169,10 +172,11 @@ def handle(input_msgs, delay_path="./"):
     for msg in input_msgs:
         msg = str(msg).strip()
         msg_list = msg.split(" ")
-        if len(msg_list) != 3:
+        if len(msg_list) < 3 or len(msg_list) > 4:
             continue
         if msg.startswith("S") or msg.startswith("s") or msg.startswith("simulation"):
-            handleSimulationNode(msg)
+            simulationFlag = True
+            handleSimulationNode(msg, delay_path)
             continue
         node_A = msg.split(" ")[0]
         node_B = msg.split(" ")[1]
@@ -193,6 +197,8 @@ def handle(input_msgs, delay_path="./"):
             print("Error! NodeInfo can not be found!")
             print(str(e))
     f.close()
+    if simulationFlag:
+        print("simulation.txt file has been created!")
     return config_nodes
 
 
@@ -208,19 +214,57 @@ def sendDelayFile(local, remote, nodes, node_na_csv):
         sftp = Remote(na, name, password).my_connect().open_sftp()
         sftp.put(local, remote)
     print('=' * 50)
-    print("Delay files are successfully sent to the server containing the relevant configuration nodes")
+    print("Delay files are successfully sent to the server which contains the relevant configuration nodes")
 
 
-def handleSimulationNode(msg):
-    pass
+def sendSimulationDelayFile(local, remote, node_na_csv):
+    csv = getNodeLocation_pd(node_na_csv)
+    name = csv["Name"][csv["Node"] == "Simulation"].values[0]
+    password = csv["Password"][csv["Node"] == "Simulation"].values[0]
+    na = csv["NA"][csv["Node"] == "Simulation"].values[0]
+    sftp = Remote(na, name, password).my_connect().open_sftp()
+    sftp.put(local, remote)
+    print("Simulation Delay File is successfully sent to the server")
+
+
+def initSimulation(path: str, file: str = "simulation_delay.txt") -> bool:
+    file_list = os.listdir(path)
+    if file in file_list:
+        os.remove(path + file)
+        return True
+    else:
+        return False
+
+
+def handleSimulationNode(msg: str, delay_path: str):
+    """
+    处理仿真节点的时延请求
+    """
+    origin_msg_l = msg.strip().split(" ")
+    if len(origin_msg_l) != 4:
+        return
+    Node_1 = origin_msg_l[1]
+    Node_2 = origin_msg_l[2]
+    delay = origin_msg_l[3]
+    if "Node_" in Node_1:
+        Node_1 = Node_1.replace("Node_", "")
+    if "Node" in Node_1:
+        Node_1 = Node_1.replace("Node", "")
+    line = Node_1 + " " + Node_2 + " " + delay + "\n"
+    output = delay_path + "simulation_delay.txt"
+    with open(output, "a") as f:
+        f.write(line)
 
 
 if __name__ == '__main__':
     welCome()
     all_input = getInputMsg()
-    delayPath = os.getcwd() + "/result/"
+    delayPath = os.getcwd() + "/"
     used_nodes = handle(all_input, delayPath)
     print("File delay.txt has been created!")
     local_path = delayPath + "delay.txt"
     remote_path = ENS_HOME + "delay.txt"
+    remote_s_path = ENS_HOME + "simulation_delay.txt"
+    local_s_path = delayPath + "simulation_delay.txt"
     sendDelayFile(local_path, remote_path, used_nodes, "Node_NA.csv")
+    sendSimulationDelayFile(local_s_path, remote_s_path, "Node_NA.csv")
