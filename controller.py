@@ -12,6 +12,8 @@ import pandas as pd
 import paramiko
 
 ENS_HOME = "/home/resolution/ens/"
+SIMULATION_IP = "192.168.47.200"
+SIMULATION_PORT = 10000
 
 
 class Remote(object):
@@ -87,7 +89,8 @@ class Controller(Remote):
         s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_STREAM)
         # print(self.host)
         s.connect((node_NA, node_port))
-        stop_command_str = "59" + node_id + "11111111"
+        timestamp = "11111111"
+        stop_command_str = "59" + node_id + timestamp
         s.send(bytes.fromhex(stop_command_str))
         recv = s.recv(1024).hex()
         if recv.startswith("5a"):
@@ -117,8 +120,50 @@ class Controller(Remote):
             print(err_)
 
 
+class SimulationController(object):
+    def __init__(self, ipaddress, port):
+        self.ipaddress = ipaddress
+        self.port = port
+
+    def start(self, node_id: str):
+        s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        s.connect((self.ipaddress, self.port))
+        realNodeID = ("0" * 8 + node_id)[-8:]
+        start_command_str = "01" + realNodeID
+        s.send(bytes.fromhex(start_command_str))
+        recv = s.recv(1024).hex()
+        if recv.startswith("11"):
+            print("response message is: " + recv + ", successfully start Node " + node_id)
+        s.close()
+        time.sleep(1)
+
+    def stop(self, node_id: str):
+        s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        s.connect((self.ipaddress, self.port))
+        realNodeID = ("0" * 8 + node_id)[-8:]
+        stop_command_str = "02" + realNodeID
+        s.send(bytes.fromhex(stop_command_str))
+        recv = s.recv(1024).hex()
+        if recv.startswith("12"):
+            print("response message is: " + recv + ", successfully start Node " + node_id)
+        s.close()
+        time.sleep(1)
+
+
 def getArgNum():
     return len(sys.argv) - 1
+
+
+def getNodeStrNum(node_str: str) -> str:
+    """
+    返回节点的ID（只含数字）
+    :param node_str: Node_1 or Node1
+    :return:  "1"
+    """
+    if "Node_" in node_str:
+        return node_str.replace("Node_", "")
+    elif "Node" in node_str:
+        return node_str.replace("Node", "")
 
 
 def getPropertyFileName(node_str):
@@ -142,7 +187,10 @@ def getInformationFromNodeStr(node_str, node_na_file="Node_NA.csv"):
 
 def getAllNodes(node_na_csv="Node_NA.csv"):
     csv = pd.read_csv(node_na_csv)
-    return "[" + ", ".join(csv["Node"].values) + "]"
+    if csv["Node"].values[-1] == "Simulation":
+        return "[" + ", ".join(csv["Node"].values[:-1]) + "]"
+    else:
+        return "[" + ", ".join(csv["Node"].values) + "]"
 
 
 def welCome():
@@ -150,11 +198,28 @@ def welCome():
     print("=" * 50)
     print("This script can be use to start, stop or kill some ENS nodes\n"
           "For example, \n"
-          "start two nodes you can tap in : start Node_1 Node_2 or start 1 2 \n"
-          "kill Some nodes you can tap in: kill Node_3 Node198 Node4 or kill 3 4 \n"
-          "stop some nodes you can tap in: stop 1 2 3 4")
-    print("If you have done all the control, press the 'enter' button to stop the input process")
+          "start two nodes you can tap in : start Node_1 Node_2 or start 1 2 or start 1-4\n"
+          "kill Some nodes you can tap in: kill Node_3 Node198 Node4 or kill 3 4 or kill 5-7\n"
+          "stop some nodes you can tap in: stop Node_1 Node_2 or stop 1 2 3 4 or stop 1-4\n"
+          "handle simulation nodes you can tap in: 's' + start/stop Node_1 Node_2 or simulation stop 1-4")
+    print("If you have done all the control, input 'exit' or press the 'enter' button to stop the input process")
     print("=" * 50)
+
+
+def getFinalNodeList(node_list: list) -> list:
+    """
+    获取真实的需要操作的节点列表
+    :param node_list:  [1, 2, 3-6, 5-7, 10]
+    :return: [1, 2, 3, 4, 5, 6, 7, 10]
+    """
+    node_final_list = []
+    for node in node_list:
+        if "-" in node:
+            for i in range(int(node.split("-")[0]), int(node.split("-")[1]) + 1):
+                node_final_list.append(str(i))
+        else:
+            node_final_list.append(node)
+    return list(set(node_final_list))
 
 
 def handleInput():
@@ -167,14 +232,8 @@ def handleInput():
         if len(msg_list) < 2:
             continue
         if msg_list[0] == "start":
-            start_node_final_list = []
             start_node_list = msg_list[1:]
-            for node in start_node_list:
-                if "-" in node:
-                    for i in range(int(node.split("-")[0]), int(node.split("-")[1]) + 1):
-                        start_node_final_list.append(str(i))
-                else:
-                    start_node_final_list.append(node)
+            start_node_final_list = getFinalNodeList(start_node_list)
             for node in start_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
@@ -182,14 +241,8 @@ def handleInput():
                 node_controller.startNode()
 
         elif msg_list[0] == "stop":
-            stop_node_final_list = []
             stop_node_list = msg_list[1:]
-            for node in stop_node_list:
-                if "-" in node:
-                    for i in range(int(node.split("-")[0]), int(node.split("-")[1]) + 1):
-                        stop_node_final_list.append(str(i))
-                else:
-                    stop_node_final_list.append(node)
+            stop_node_final_list = getFinalNodeList(stop_node_list)
             for node in stop_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
@@ -198,25 +251,23 @@ def handleInput():
 
         elif msg_list[0] == "kill":
             kill_node_list = msg_list[1:]
-            kill_node_final_list = []
-            for node in kill_node_list:
-                if "-" in node:
-                    for i in range(int(node.split("-")[0]), int(node.split("-")[1]) + 1):
-                        kill_node_final_list.append(str(i))
-                else:
-                    kill_node_final_list.append(node)
+            kill_node_final_list = getFinalNodeList(kill_node_list)
             for node in kill_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
                 node_controller = Controller(node_str, host_na, host_name, host_password)
                 node_controller.killNode()
+
+        elif msg_list[0] in ["simulation", "s", "Simulation"]:
+            handleSimulation(msg[1:])
+
         else:
             print("Valid command!")
             continue
     print("All commands have been committed! Bye ~")
 
 
-def handleInput_simple(command, node_list):
+def handleInput_simple(command: str, node_list: list):
     if len(node_list) < 1:
         return
     if command == "start":
@@ -239,6 +290,35 @@ def handleInput_simple(command, node_list):
             host_na, host_name, host_password = getInformationFromNodeStr(node_str)
             node_controller = Controller(node_str, host_na, host_name, host_password)
             node_controller.killNode()
+    else:
+        print("Valid command!")
+        return
+
+
+def handleSimulation(msg: str):
+    """
+    向仿真节点发送启动和停止请求
+    :param msg:
+    :return:
+    """
+    msg_list = msg.strip().split(" ")
+    if len(msg_list) < 2:
+        return
+    if msg_list[0] == "start":
+        start_node_list = msg_list[1:]
+        start_node_final_list = getFinalNodeList(start_node_list)
+        for node in start_node_final_list:
+            node = getNodeStrNum(node)
+            sc = SimulationController(SIMULATION_IP, SIMULATION_PORT)
+            sc.start(node)
+
+    elif msg_list[0] == "stop":
+        stop_node_list = msg_list[1:]
+        stop_node_final_list = getFinalNodeList(stop_node_list)
+        for node in stop_node_final_list:
+            node = getNodeStrNum(node)
+            sc = SimulationController(SIMULATION_IP, SIMULATION_PORT)
+            sc.stop(node)
     else:
         print("Valid command!")
         return
