@@ -10,6 +10,7 @@ import os
 
 ENS_HOME = "/home/resolution/ens/"
 SIMULATION_HOME = "/home/resolution/ens/"
+SIMULATION_DEFAULT_DELAY = ["100", "50", "10"]
 
 
 class Remote(object):
@@ -172,7 +173,7 @@ def handle(input_msgs, delay_path="./"):
     for msg in input_msgs:
         msg = str(msg).strip()
         msg_list = msg.split(" ")
-        if len(msg_list) < 3 or len(msg_list) > 4:
+        if len(msg_list) < 3 or len(msg_list) > 6:
             continue
         if msg.startswith("S") or msg.startswith("s") or msg.startswith("simulation"):
             simulationFlag = True
@@ -239,18 +240,27 @@ def initSimulation(path: str, file: str = "simulation_delay.txt") -> bool:
 def handleSimulationNode(msg: str, delay_path: str):
     """
     处理仿真节点的时延请求
+    生成文件格式为：
+    <ID> <LEVEL> <DELAY1> <DELAY2> <DELAY3>
     """
+    delay_1, delay_2, delay_3 = SIMULATION_DEFAULT_DELAY
     origin_msg_l = msg.strip().split(" ")
-    if len(origin_msg_l) != 4:
-        return
-    Node_1 = origin_msg_l[1]
-    Node_2 = origin_msg_l[2]
-    delay = origin_msg_l[3]
-    if "Node_" in Node_1:
-        Node_1 = Node_1.replace("Node_", "")
-    if "Node" in Node_1:
-        Node_1 = Node_1.replace("Node", "")
-    line = Node_1 + " " + Node_2 + " " + delay + "\n"
+    node_ID = origin_msg_l[1]
+    level = origin_msg_l[2]
+    if len(origin_msg_l) == 4:
+        delay_1 = origin_msg_l[3]
+    elif len(origin_msg_l) == 5:
+        delay_1 = origin_msg_l[3]
+        delay_2 = origin_msg_l[4]
+    elif len(origin_msg_l) == 6:
+        delay_1 = origin_msg_l[3]
+        delay_2 = origin_msg_l[4]
+        delay_3 = origin_msg_l[5]
+    if "Node_" in node_ID:
+        node_ID = node_ID.replace("Node_", "")
+    if "Node" in node_ID:
+        node_ID = node_ID.replace("Node", "")
+    line = node_ID + " " + level + " " + delay_1 + " " + delay_2 + " " + delay_3 + " " + "\n"
     output = delay_path + "simulation_delay.txt"
     with open(output, "a") as f:
         f.write(line)
