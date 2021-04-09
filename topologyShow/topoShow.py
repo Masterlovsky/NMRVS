@@ -89,12 +89,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-    # nodes = csvToDict("NodeLink.csv")
-    # root_list = findRootsByDict(nodes)
-    # data_gen = []
-    # for root_str in root_list:
-    #     root = dataConstructor(root_str, nodes)
-    #     res = dataFormatter(root)
-    #     print(res)
-    #     data_gen.append(res)
-    # generateTree(data_gen)
