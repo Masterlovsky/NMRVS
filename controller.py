@@ -12,8 +12,8 @@ import pandas as pd
 import paramiko
 
 ENS_HOME = "/home/resolution/ens/"
-SIMULATION_IP = "192.168.47.200"
-SIMULATION_PORT = 10000
+SIMULATION_IP = "192.168.46.99"
+SIMULATION_PORT = 40000
 
 
 class Remote(object):
@@ -129,7 +129,7 @@ class SimulationController(object):
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
-        start_command_str = "01" + realNodeID
+        start_command_str = "00" + realNodeID
         s.send(bytes.fromhex(start_command_str))
         recv = s.recv(1024).hex()
         if recv.startswith("11"):
@@ -141,7 +141,7 @@ class SimulationController(object):
         s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
-        stop_command_str = "02" + realNodeID
+        stop_command_str = "01" + realNodeID
         s.send(bytes.fromhex(stop_command_str))
         recv = s.recv(1024).hex()
         if recv.startswith("12"):
@@ -164,6 +164,8 @@ def getNodeStrNum(node_str: str) -> str:
         return node_str.replace("Node_", "")
     elif "Node" in node_str:
         return node_str.replace("Node", "")
+    else:
+        return node_str
 
 
 def getPropertyFileName(node_str):
