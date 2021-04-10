@@ -8,8 +8,7 @@ from pyecharts.charts import Tree
 from pyecharts.globals import ThemeType
 import numpy as np
 import pandas as pd
-import time
-import threading
+
 
 
 class Node(object):

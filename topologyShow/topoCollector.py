@@ -5,28 +5,40 @@ Used to show Topology of Nodes
 """
 import threading
 import time
+import socket
+
+ADDRESS = ("127.0.0.1", 9000)
 
 
-class MyThread(threading.Thread):
-    def __init__(self, thread_id, name, counter):
-        threading.Thread.__init__(self)
-        self.threadID = thread_id
-        self.name = name
-        self.counter = counter
-
-    def run(self):
-        print("开始线程：" + self.name)
-        print_time(self.name, self.counter, 5)
-        print("退出线程：" + self.name)
+def resolvePacket(data_hex):
+    nodeID = ""
+    parentID = ""
+    return nodeID, parentID
 
 
-exitFlag = False
+def writeToCsv(nodeid, parenid):
+    line = nodeid + "," + parenid + "\n"
+    with open("NodeLink.csv", "a") as f:
+        f.write(line)
 
 
-def print_time(threadName, delay, counter):
-    while counter:
-        if exitFlag:
-            threadName.exit()
-        time.sleep(delay)
-        print("%s: %s" % (threadName, time.ctime(time.time())))
-        counter -= 1
+if __name__ == '__main__':
+    # 创建套接字
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # 绑定
+    sock.bind(ADDRESS)
+    print("waiting to receive messages...")
+
+    while True:
+        (data, addr) = sock.recvfrom(1024)
+        text = data.decode('utf-8')
+        if text == 'exit':
+            break
+        else:
+            print('The client at {} says {!r}'.format(addr, text))
+            text = 'Your data was {} bytes long'.format(len(data))
+            data = text.encode('utf-8')
+            sock.sendto(data, addr)
+
+    # 关闭套接字
+    sock.close()
