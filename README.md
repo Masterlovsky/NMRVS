@@ -10,3 +10,9 @@
 ### delay_gen.py
 
 ### topologyShow.py
+
+##Todo
+1. In **topo.show**, how to find the root_node faster? 
+
+Use the node_parent table? check if root_node's parent == null?
+
