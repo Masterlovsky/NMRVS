@@ -42,6 +42,9 @@ class DataBase(object):
         select_sql = "select * from nmrvs.node_parent;"
         cursor.execute(select_sql)
         row_all = cursor.fetchall()
+        conn.commit()
+        cursor.close()
+        conn.close()
         return row_all
 
 
@@ -71,7 +74,7 @@ def csvToDict(file: str) -> dict:
 def dataBaseToDict(rolls: tuple) -> dict:
     """
     使用数据库中读取的条目构建父子关系字典
-    :param rolls: 数据库中读取的条目，元组类型
+    :param rolls: 数据库中读取的条目，元组类型 (nodeid, parentid)
     :return: 父子关系字典
     """
     nodes_dict = {}
@@ -121,17 +124,17 @@ def dataFormatter(root_node):
 
 
 def run():
-    nodes = csvToDict("NodeLink.csv")
+    # nodes = csvToDict("NodeLink.csv")
+    nodes = dataBaseToDict(DataBase("root", "m97z04l05").readDatabase())
     root_list = findRootsByDict(nodes)
     data_gen = []
     for root_str in root_list:
         root = dataConstructor(root_str, nodes)
         res = dataFormatter(root)
-        print(res)
+        print("structure:\n" + str(res))
         data_gen.append(res)
     generateTree(data_gen)
 
 
 if __name__ == '__main__':
-    # run()
-    print(dataBaseToDict(DataBase("root", "m97z04l05").readDatabase()))
+    run()
