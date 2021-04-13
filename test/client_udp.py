@@ -1,5 +1,4 @@
 import socket
-import time
 
 ADDRESS = ("127.0.0.1", 9000)
 if __name__ == '__main__':

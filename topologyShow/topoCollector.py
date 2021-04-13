@@ -24,21 +24,20 @@ def writeToCsv(nodeid, parenid):
 
 if __name__ == '__main__':
     # 创建套接字
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # 绑定
     sock.bind(ADDRESS)
+    # 监听
+    sock.listen(1000)
     print("waiting to receive messages...")
-
-    while True:
-        (data, addr) = sock.recvfrom(1024)
-        text = data.decode('utf-8')
-        if text == 'exit':
+    flag = True
+    while flag:
+        client_socket, addr = sock.accept()
+        receive_data = client_socket.recv(1024)
+        if receive_data.decode("utf-8") == "exit":
             break
-        else:
-            print('The client at {} says {!r}'.format(addr, text))
-            text = 'Your data was {} bytes long'.format(len(data))
-            data = text.encode('utf-8')
-            sock.sendto(data, addr)
-
+        print("from: " + str(addr) + " receive: " + receive_data.decode("utf-8"))
+        client_socket.send("success!".encode("utf-8"))
+        client_socket.close()
     # 关闭套接字
     sock.close()
