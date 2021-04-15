@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 import pymysql
 
+ROOT_STR = "00000000"
+
 
 class Node(object):
     def __str__(self) -> str:
@@ -86,11 +88,7 @@ def dataBaseToDict(rolls: tuple) -> dict:
 
 
 def findRootsByDict(nodes_dict: dict) -> list:
-    root_l = []
-    for key in nodes_dict.keys():
-        if key not in sum(nodes_dict.values(), []):
-            root_l.append(key)
-    return root_l
+    return nodes_dict[ROOT_STR]
 
 
 def dataConstructor(root: str, node_dict: dict) -> Node:
