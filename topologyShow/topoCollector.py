@@ -70,7 +70,7 @@ if __name__ == '__main__':
             client_socket, addr = sock.accept()
             receive_data = client_socket.recv(1024)
             if receive_data.decode("utf-8") == "exit":
-                break
+                flag = False
             data = receive_data.hex()
             nodeId, parentId = resolvePacket(data)
             # writeToCsv(nodeId, parentId)
