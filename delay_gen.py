@@ -124,7 +124,8 @@ def welCome(node_na_csv="Node_NA.csv"):
     print("Welcome to delay-generate script Ver1.0")
     print("=" * 50)
     print("Input some delay messages if you want to create delay file.\n"
-          "For example, create delay of two nodes you can tap in : Node_1 Node_2 <delay> or 1 2 <delay>")
+          "For example, create delay of two nodes you can tap in : Node_1 Node_2 <delay> or 1 2 <delay>\n"
+          "Create delay of Simulation nodes, you can tap in: s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>")
     print("If you have created all the delay message, press the 'enter' button to stop the input process")
     print("=" * 50)
     print("All possible nodes are list as follows: " + getAllNodes(node_na_csv))

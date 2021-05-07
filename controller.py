@@ -189,23 +189,20 @@ def getInformationFromNodeStr(node_str, node_na_file="Node_NA.csv"):
 
 def getAllNodes(node_na_csv="Node_NA.csv"):
     csv = pd.read_csv(node_na_csv)
-    if csv["Node"].values[-1] == "Simulation":
-        return "[" + ", ".join(csv["Node"].values[:-1]) + "]"
-    else:
-        return "[" + ", ".join(csv["Node"].values) + "]"
+    return "[" + ", ".join(csv["Node"].values) + "]"
 
 
 def welCome():
     print("Welcome to Node controller script Ver1.0")
-    print("=" * 50)
+    print("=" * 80)
     print("This script can be use to start, stop or kill some ENS nodes\n"
           "For example, \n"
-          "start two nodes you can tap in : start Node_1 Node_2 or start 1 2 or start 1-4\n"
-          "kill Some nodes you can tap in: kill Node_3 Node198 Node4 or kill 3 4 or kill 5-7\n"
+          "start some nodes you can tap in : start Node_1 Node_2 or start 1 2 or start 1-4\n"
+          "kill some nodes you can tap in: kill Node_3 Node198 Node4 or kill 3 4 or kill 5-7\n"
           "stop some nodes you can tap in: stop Node_1 Node_2 or stop 1 2 3 4 or stop 1-4\n"
           "handle simulation nodes you can tap in: 's' + start/stop Node_1 Node_2 or simulation stop 1-4")
     print("If you have done all the control, input 'exit' or press the 'enter' button to stop the input process")
-    print("=" * 50)
+    print("=" * 80)
 
 
 def getFinalNodeList(node_list: list) -> list:
