@@ -23,7 +23,8 @@ def resolvePacket(data_hex):
         raise Exception("Warning, invalid packet header!\n")
     nodeID = data_hex[2:10]
     parentID = data_hex[10:18]
-    return nodeID, parentID
+    nodeIsReal = data_hex[18:20]
+    return nodeID, parentID, nodeIsReal
 
 
 def writeToCsv(nodeid, parentid):
@@ -39,13 +40,13 @@ class DataBase(object):
         self.user = user
         self.passwd = passwd
 
-    def writeToDataBase(self, node_id, parent_id):
+    def writeToDataBase(self, node_id, parent_id, node_is_real):
         conn = pymysql.connect(host=self.host, user=self.user, passwd=self.passwd, port=self.port, db="nmrvs",
                                charset="utf8")
         cursor = conn.cursor()
-        select_sql = "INSERT into node_parent(NodeID, ParentID) values(%s,%s)" \
-                     + " on DUPLICATE key UPDATE NodeID=%s,ParentID=%s;"
-        values = (node_id, parent_id, node_id, parent_id)
+        select_sql = "INSERT into node_parent(NodeID, ParentID, NodeIsReal) values(%s,%s,%s)" \
+                     + " on DUPLICATE key UPDATE NodeID=%s,ParentID=%s,NodeIsReal=%s;"
+        values = (node_id, parent_id, node_is_real, node_id, parent_id, node_is_real)
         # select_sql = "INSERT into node_parent(NodeID, ParentID)values('" + "00000011" + "','" + "00000001" + "')"\
         #              + " on DUPLICATE key UPDATE NodeID='" + "00000011" + "'," + "ParentID='" + "00000001" + "'; "
         cursor.execute(select_sql, values)
@@ -72,10 +73,10 @@ if __name__ == '__main__':
             if receive_data.decode("utf-8") == "exit":
                 flag = False
             data = receive_data.hex()
-            nodeId, parentId = resolvePacket(data)
+            nodeId, parentId, isReal = resolvePacket(data)
             # writeToCsv(nodeId, parentId)
             db = DataBase("root", "m97z04l05")
-            db.writeToDataBase(nodeId, parentId)
+            db.writeToDataBase(nodeId, parentId, isReal)
             print("from: " + str(addr) + " receive: " + data)
             client_socket.send("success!".encode("utf-8"))
             client_socket.close()

@@ -17,12 +17,16 @@ class Node(object):
     def __str__(self) -> str:
         return "name: " + self.name + ", children number: " + str(len(self.children))
 
-    def __init__(self, name: str, children: list):
+    def __init__(self, name: str, children: list, is_real: str):
         self.children = children
         self.name = name
+        self.isReal = is_real
 
     def getName(self):
         return self.name
+
+    def getVal(self):
+        return self.isReal
 
     def setChild(self, child):
         if child == "":
@@ -56,8 +60,15 @@ def generateTree(data):
     :param data:
     """
     c = (
-        Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE))
-            .add("", data, symbol_size=10, orient="TB")
+        Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes"))
+            .add("",
+                 data,
+                 symbol="emptyCircle",
+                 symbol_size=10,
+                 # orient="TB",
+                 label_opts=opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center"),
+                 tooltip_opts=opts.TooltipOpts(formatter="id: '{b}', isReal: {c}")
+                 )
             .set_global_opts(title_opts=opts.TitleOpts(title="Tree-Nodes"))
             .render("tree_Node.html")
     )
@@ -73,42 +84,46 @@ def csvToDict(file: str) -> dict:
     return nodes_dict
 
 
-def dataBaseToDict(rolls: tuple) -> dict:
+def dataBaseToDict(rolls: tuple) -> (dict, dict):
     """
     使用数据库中读取的条目构建父子关系字典
-    :param rolls: 数据库中读取的条目，元组类型 (nodeid, parentid)
+    :param rolls: 数据库中读取的条目，元组类型 (nodeid, parentid, nodeIsReal)
     :return: 父子关系字典
     """
-    nodes_dict = {}
-    for node_id, father_id in rolls:
-        if father_id not in nodes_dict.keys():
-            nodes_dict[father_id] = []
-        nodes_dict[father_id].append(node_id)
-    return nodes_dict
+    father_child_dict = {}
+    node_dict = {}
+    for node_id, father_id, is_real in rolls:
+        node_dict[node_id] = is_real
+        if father_id not in father_child_dict.keys():
+            father_child_dict[father_id] = []  # 这个list中存着所有的子节点
+        father_child_dict[father_id].append(node_id)
+    return father_child_dict, node_dict
 
 
 def findRootsByDict(nodes_dict: dict) -> list:
     return nodes_dict[ROOT_STR]
 
 
-def dataConstructor(root: str, node_dict: dict) -> Node:
+def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
     """
     根据根节点和父子关系字典生成树结构
+    :param is_real_dict: 表示节点虚实的字典
     :param root: 根节点ID
     :param node_dict: 父子关系字典
     :return: 根节点Node
     """
-    node_root = Node(root, [])
+    node_root = Node(root, [], is_real_dict[root])
     for child in node_dict[root]:
         if child not in node_dict.keys():
-            node_root.setChild(Node(child, []))
+            node_root.setChild(Node(child, [], is_real_dict[child]))
         else:
-            node_root.setChild(dataConstructor(child, node_dict))
+            node_root.setChild(dataConstructor(child, node_dict, is_real_dict))
     return node_root
 
 
 def _dataFormatterHelp(root_node: Node):
-    res_dict = {"name": root_node.getName(), "children": [_dataFormatterHelp(child) for child in root_node.children]}
+    res_dict = {"name": root_node.getName(), "value": root_node.getVal(),
+                "children": [_dataFormatterHelp(child) for child in root_node.children]}
     return res_dict
 
 
@@ -123,11 +138,11 @@ def dataFormatter(root_node):
 
 def run():
     # nodes = csvToDict("NodeLink.csv")
-    nodes = dataBaseToDict(DataBase("root", "m97z04l05").readDatabase())
-    root_list = findRootsByDict(nodes)
+    relation_dict, isReal_dict = dataBaseToDict(DataBase("root", "m97z04l05").readDatabase())
+    root_list = findRootsByDict(relation_dict)
     data_gen = []
     for root_str in root_list:
-        root = dataConstructor(root_str, nodes)
+        root = dataConstructor(root_str, relation_dict, isReal_dict)
         res = dataFormatter(root)
         print("structure:\n" + str(res))
         data_gen.append(res)
