@@ -65,7 +65,13 @@ class Controller(Remote):
         """
         Start a NMM NODE
         """
+        command_search = "ps -aux |grep java"
+        out_msg, error_msg = self.send_command(command_search)
         properties_file = getPropertyFileName(self.node)
+        for line in out_msg.split("\n"):
+            if properties_file in line:
+                print(properties_file.replace(".properties", "")+" has already been started! Skip this node!")
+                return
         command = "cd " + ENS_HOME + " && nohup java -jar ens.jar " + properties_file + " 2>&1 >log/" \
                   + str(self.node) + ".log &\n"
         ssh = self.my_connect()
