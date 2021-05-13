@@ -67,7 +67,7 @@ class Controller(Remote):
         """
         properties_file = getPropertyFileName(self.node)
         command = "cd " + ENS_HOME + " && nohup java -jar ens.jar " + properties_file + " 2>&1 >log/" \
-                  + str(self.node).replace(".properties", "") + " &\n"
+                  + str(self.node) + ".log &\n"
         ssh = self.my_connect()
         shell = ssh.invoke_shell()
         shell.send(command)
@@ -218,7 +218,10 @@ def getFinalNodeList(node_list: list) -> list:
                 node_final_list.append(str(i))
         else:
             node_final_list.append(node)
-    return list(set(node_final_list))
+    if len(set(node_final_list)) != len(node_final_list):
+        return list(set(node_final_list))
+    else:
+        return node_final_list
 
 
 def handleInput():
