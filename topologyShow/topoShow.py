@@ -9,6 +9,7 @@ from pyecharts.globals import ThemeType
 import numpy as np
 import pandas as pd
 import pymysql
+import json
 
 ROOT_STR = "00000000"
 
@@ -60,18 +61,19 @@ def generateTree(data):
     :param data:
     """
     c = (
-        Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes"))
+        Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes", chart_id="masterlovsky_tree_01"))
             .add("",
                  data,
                  symbol="emptyCircle",
                  symbol_size=10,
                  # orient="TB",
                  label_opts=opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center"),
-                 tooltip_opts=opts.TooltipOpts(formatter="id: '{b}', isReal: {c}")
+                 tooltip_opts=opts.TooltipOpts(formatter="id: '{b}', isReal: {c}"),
+                 itemstyle_opts=opts.ItemStyleOpts(color="orange"),
                  )
             .set_global_opts(title_opts=opts.TitleOpts(title="Tree-Nodes"))
-            .render("tree_Node.html")
     )
+    return c
 
 
 def csvToDict(file: str) -> dict:
@@ -144,9 +146,18 @@ def run():
     for root_str in root_list:
         root = dataConstructor(root_str, relation_dict, isReal_dict)
         res = dataFormatter(root)
-        print("structure:\n" + str(res))
         data_gen.append(res)
-    generateTree(data_gen)
+    tree = generateTree(data_gen)
+    tree.add_js_funcs(
+        '''
+        chart_masterlovsky_tree_01.on('click',  function(param) {
+        console.log(param)
+        });  
+        '''
+    )
+    print("structure:")
+    print(json.dumps(tree.get_options().get("series")[0]["data"][0], indent=4, separators=(',', ':')))
+    tree.render("tree_Node.html")
 
 
 if __name__ == '__main__':
