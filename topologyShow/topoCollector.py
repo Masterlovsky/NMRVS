@@ -9,7 +9,7 @@ import socket
 
 import pymysql
 
-ADDRESS = ("127.0.0.1", 9000)
+ADDRESS = ("::1", 9000)
 MSG_PARENT = "0a"
 
 
@@ -59,7 +59,7 @@ class DataBase(object):
 
 if __name__ == '__main__':
     # 创建套接字
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     # 绑定
     sock.bind(ADDRESS)
     # 监听
