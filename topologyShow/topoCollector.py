@@ -70,15 +70,15 @@ if __name__ == '__main__':
         try:
             client_socket, addr = sock.accept()
             receive_data = client_socket.recv(1024)
-            if receive_data.decode("utf-8") == "exit":
-                flag = False
+            # if receive_data.decode("utf-8") == "exit":
+            #     flag = False
             data = receive_data.hex()
             nodeId, parentId, isReal = resolvePacket(data)
             # writeToCsv(nodeId, parentId)
             db = DataBase("root", "m97z04l05")
             db.writeToDataBase(nodeId, parentId, isReal)
             print("from: " + str(addr) + " receive: " + data)
-            client_socket.send("success!".encode("utf-8"))
+            # client_socket.send("success!".encode("utf-8"))
             client_socket.close()
         except Exception as err:
             print(err)

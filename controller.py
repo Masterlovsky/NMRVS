@@ -70,7 +70,7 @@ class Controller(Remote):
         properties_file = getPropertyFileName(self.node)
         for line in out_msg.split("\n"):
             if properties_file in line:
-                print(properties_file.replace(".properties", "")+" has already been started! Skip this node!")
+                print(properties_file.replace(".properties", "") + " has already been started! Skip this node!")
                 return
         command = "cd " + ENS_HOME + " && nohup java -jar ens.jar " + properties_file + " 2>&1 >log/" \
                   + str(self.node) + ".log &\n"
@@ -178,7 +178,7 @@ def getPropertyFileName(node_str):
     # property_name = ""
     if "Node" in node_str or "node" in node_str:
         property_name = node_str + ".properties"
-    elif re.match(r"\d*", node_str):
+    elif re.fullmatch(r'\d+', node_str) is not None:
         property_name = "Node_" + node_str + ".properties"
     else:
         raise ValueError("Warning! Node name input format is wrong!")
