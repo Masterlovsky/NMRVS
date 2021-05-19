@@ -12,8 +12,8 @@ import pandas as pd
 import paramiko
 
 ENS_HOME = "/home/resolution/ens/"
-SIMULATION_IP = "192.168.46.99"
-SIMULATION_PORT = 40000
+SIMULATION_IP = "2400:dd01:1037:201:192:168:47:198"
+SIMULATION_PORT = 8888
 
 
 class Remote(object):
@@ -130,9 +130,13 @@ class SimulationController(object):
     def __init__(self, ipaddress, port):
         self.ipaddress = ipaddress
         self.port = port
+        if ':' in ipaddress:
+            self.socket_family = socket.AF_INET6
+        else:
+            self.socket_family = socket.AF_INET
 
     def start(self, node_id: str):
-        s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        s = socket.socket(family=self.socket_family, type=socket.SOCK_STREAM)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
         start_command_str = "00" + realNodeID
@@ -144,7 +148,7 @@ class SimulationController(object):
         time.sleep(1)
 
     def stop(self, node_id: str):
-        s = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        s = socket.socket(family=self.socket_family, type=socket.SOCK_STREAM)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
         stop_command_str = "01" + realNodeID

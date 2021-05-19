@@ -55,19 +55,31 @@ class DataBase(object):
         return row_all
 
 
-def generateTree(data):
+class DateEncoding(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, opts.LabelOpts):
+            return str(o)
+
+
+def generateTree(data: list):
     """
     根据json数据生成树结构的html代码
     :param data:
     """
+    tree_data = {"name": "根节点管理系统", "children": [],
+                 "label": opts.LabelOpts(font_size=14, font_weight="bold", horizontal_align="center",
+                                         vertical_align="center", distance=10)}
+    for series in data:
+        tree_data["children"].append(series)
     c = (
         Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes", chart_id="masterlovsky_tree_01"))
             .add("",
-                 data,
+                 [tree_data],
                  symbol="emptyCircle",
                  symbol_size=10,
                  # orient="TB",
-                 label_opts=opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center"),
+                 initial_tree_depth=3,
+                 # label_opts=opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center"),
                  tooltip_opts=opts.TooltipOpts(formatter="id: '{b}', isReal: {c}"),
                  itemstyle_opts=opts.ItemStyleOpts(color="orange"),
                  )
@@ -90,7 +102,7 @@ def dataBaseToDict(rolls: tuple) -> (dict, dict):
     """
     使用数据库中读取的条目构建父子关系字典
     :param rolls: 数据库中读取的条目，元组类型 (nodeid, parentid, nodeIsReal)
-    :return: 父子关系字典
+    :return: father_child_dict：父子关系字典，node_dict：虚实关系字典
     """
     father_child_dict = {}
     node_dict = {}
@@ -124,7 +136,11 @@ def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
 
 
 def _dataFormatterHelp(root_node: Node):
-    res_dict = {"name": root_node.getName(), "value": root_node.getVal(),
+    if root_node.getVal() == "01":
+        _label = opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center")
+    else:
+        _label = opts.LabelOpts(color="red", font_weight="bold", horizontal_align="center", vertical_align="center")
+    res_dict = {"name": root_node.getName(), "value": root_node.getVal(), "label": _label,
                 "children": [_dataFormatterHelp(child) for child in root_node.children]}
     return res_dict
 
@@ -156,7 +172,8 @@ def run():
         '''
     )
     print("structure:")
-    print(json.dumps(tree.get_options().get("series")[0]["data"][0], indent=4, separators=(',', ':')))
+    print(json.dumps(tree.get_options().get("series")[0]["data"][0], indent=4, separators=(',', ':'),
+                     cls=DateEncoding, ensure_ascii=False))
     tree.render("tree_Node.html")
 
 
