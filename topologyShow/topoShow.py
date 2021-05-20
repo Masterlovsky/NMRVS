@@ -127,11 +127,12 @@ def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
     :return: 根节点Node
     """
     node_root = Node(root, [], is_real_dict[root])
-    for child in node_dict[root]:
-        if child not in node_dict.keys():
-            node_root.setChild(Node(child, [], is_real_dict[child]))
-        else:
-            node_root.setChild(dataConstructor(child, node_dict, is_real_dict))
+    if root in node_dict.keys():
+        for child in node_dict[root]:
+            if child not in node_dict.keys():
+                node_root.setChild(Node(child, [], is_real_dict[child]))
+            else:
+                node_root.setChild(dataConstructor(child, node_dict, is_real_dict))
     return node_root
 
 
