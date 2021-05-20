@@ -126,7 +126,7 @@ def welCome(node_na_csv="Node_NA.csv"):
     print("=" * 80)
     print("Input some delay messages if you want to create delay file.\n"
           "For example, create delay of two nodes you can tap in : Node_1 Node_2 <delay> or 1 2 <delay>\n"
-          "Create delay of Simulation nodes, you can tap in: s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>")
+          "Create delay of Simulation nodes, input: s <Node_1>-<Node_2> <Node_level> <delay_l1> <delay_l2> <delay_l3>")
     print("If you have created all the delay message, press the 'enter' button to stop the input process")
     print("=" * 80)
     print("All possible nodes are list as follows: " + getAllNodes(node_na_csv))
@@ -249,6 +249,8 @@ def handleSimulationNode(msg: str, delay_path: str):
     origin_msg_l = msg.strip().split(" ")
     node_ID = origin_msg_l[1]
     level = origin_msg_l[2]
+    output = delay_path + "simulation_delay.txt"
+    f = open(output, "a")
     if len(origin_msg_l) == 4:
         delay_1 = origin_msg_l[3]
     elif len(origin_msg_l) == 5:
@@ -262,11 +264,15 @@ def handleSimulationNode(msg: str, delay_path: str):
         node_ID = node_ID.replace("Node_", "")
     if "Node" in node_ID:
         node_ID = node_ID.replace("Node", "")
-    node_ID = ("0" * 8 + node_ID)[-8:]
-    line = node_ID + " " + level + " " + delay_1 + " " + delay_2 + " " + delay_3 + " " + "\n"
-    output = delay_path + "simulation_delay.txt"
-    with open(output, "a") as f:
+    if "-" in node_ID:
+        start, end = node_ID.split("-")
+        for i in range(int(start), int(end) + 1):
+            line = str(i) + " " + level + " " + delay_1 + " " + delay_2 + " " + delay_3 + " " + "\n"
+            f.write(line)
+    else:
+        line = node_ID + " " + level + " " + delay_1 + " " + delay_2 + " " + delay_3 + " " + "\n"
         f.write(line)
+    f.close()
 
 
 if __name__ == '__main__':
