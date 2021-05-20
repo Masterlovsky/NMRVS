@@ -141,29 +141,41 @@ class SimulationController(object):
 
     def start(self, node_id: str):
         s = socket.socket(family=self.socket_family, type=socket.SOCK_STREAM)
+        s.settimeout(10)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
         start_command_str = "00" + realNodeID
         s.send(bytes.fromhex(start_command_str))
-        recv = s.recv(1024).hex()
+        try:
+            recv = s.recv(1024).hex()
+        except socket.timeout:
+            print("Warning, Node " + node_id + " receive timeout!")
+            recv = ""
         if recv.startswith("11"):
             print("response message is: " + recv + ", successfully start Node " + node_id)
         else:
-            print("Unsupported message!, response is: " + recv)
+            if recv != "":
+                print("Unsupported message!, response is: " + recv)
         s.close()
         time.sleep(1)
 
     def stop(self, node_id: str):
         s = socket.socket(family=self.socket_family, type=socket.SOCK_STREAM)
+        s.settimeout(5)
         s.connect((self.ipaddress, self.port))
         realNodeID = ("0" * 8 + node_id)[-8:]
         stop_command_str = "01" + realNodeID
         s.send(bytes.fromhex(stop_command_str))
-        recv = s.recv(1024).hex()
-        if recv.startswith("12"):
+        try:
+            recv = s.recv(1024).hex()
+        except socket.timeout:
+            print("Warning, Node " + node_id + " receive timeout!")
+            recv = ""
+        if recv.startswith("11"):
             print("response message is: " + recv + ", successfully start Node " + node_id)
         else:
-            print("Unsupported message!, response is: " + recv)
+            if recv != "":
+                print("Unsupported message!, response is: " + recv)
         s.close()
         time.sleep(1)
 
