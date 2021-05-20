@@ -69,6 +69,7 @@ class Controller(Remote):
         out_msg, error_msg = self.send_command(command_search)
         properties_file = getPropertyFileName(self.node)
         for line in out_msg.split("\n"):
+            # If the node has been started, skip this node!
             if properties_file in line:
                 print(properties_file.replace(".properties", "") + " has already been started! Skip this node!")
                 return
@@ -93,8 +94,11 @@ class Controller(Remote):
         node_NA = properties["NODE_NA"].strip()
         node_port = int(properties["BASIC_PORT"]) + int(properties["NODE_LEVEL"])
         s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_STREAM)
-        # print(self.host)
-        s.connect((node_NA, node_port))
+        try:
+            s.connect((node_NA, node_port))
+        except socket.error:
+            print("Can't connected to node: " + self.node + ". Maybe this node has been stopped!")
+            return
         timestamp = "11111111"
         stop_command_str = "59" + node_id + timestamp
         s.send(bytes.fromhex(stop_command_str))
@@ -144,6 +148,8 @@ class SimulationController(object):
         recv = s.recv(1024).hex()
         if recv.startswith("11"):
             print("response message is: " + recv + ", successfully start Node " + node_id)
+        else:
+            print("Unsupported message!, response is: " + recv)
         s.close()
         time.sleep(1)
 
@@ -156,6 +162,8 @@ class SimulationController(object):
         recv = s.recv(1024).hex()
         if recv.startswith("12"):
             print("response message is: " + recv + ", successfully start Node " + node_id)
+        else:
+            print("Unsupported message!, response is: " + recv)
         s.close()
         time.sleep(1)
 
@@ -191,10 +199,14 @@ def getPropertyFileName(node_str):
 
 def getInformationFromNodeStr(node_str, node_na_file="Node_NA.csv"):
     csv = pd.read_csv(node_na_file)
-    node_na = csv["NA"][csv["Node"] == node_str].values[0]
-    hostname = csv["Name"][csv["Node"] == node_str].values[0]
-    host_password = csv["Password"][csv["Node"] == node_str].values[0]
-    return node_na, hostname, host_password
+    try:
+        node_na = csv["NA"][csv["Node"] == node_str].values[0]
+        hostname = csv["Name"][csv["Node"] == node_str].values[0]
+        host_password = csv["Password"][csv["Node"] == node_str].values[0]
+        return node_na, hostname, host_password
+    except IndexError:
+        print("Error! This node is not in the Node_NA.csv config file")
+        return None, None, None
 
 
 def getAllNodes(node_na_csv="Node_NA.csv"):
@@ -249,6 +261,8 @@ def handleInput():
             for node in start_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+                if host_na is None:
+                    continue
                 node_controller = Controller(node_str, host_na, host_name, host_password)
                 node_controller.startNode()
 
@@ -258,6 +272,8 @@ def handleInput():
             for node in stop_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+                if host_na is None:
+                    continue
                 node_controller = Controller(node_str, host_na, host_name, host_password)
                 node_controller.stopNode()
 
@@ -267,6 +283,8 @@ def handleInput():
             for node in kill_node_final_list:
                 node_str = getPropertyFileName(node).replace(".properties", "")
                 host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+                if host_na is None:
+                    continue
                 node_controller = Controller(node_str, host_na, host_name, host_password)
                 node_controller.killNode()
 
@@ -286,6 +304,8 @@ def handleInput_simple(command: str, node_list: list):
         for node in node_list:
             node_str = getPropertyFileName(node).replace(".properties", "")
             host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+            if host_na is None:
+                continue
             node_controller = Controller(node_str, host_na, host_name, host_password)
             node_controller.startNode()
 
@@ -293,6 +313,8 @@ def handleInput_simple(command: str, node_list: list):
         for node in node_list:
             node_str = getPropertyFileName(node).replace(".properties", "")
             host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+            if host_na is None:
+                continue
             node_controller = Controller(node_str, host_na, host_name, host_password)
             node_controller.stopNode()
 
@@ -300,6 +322,8 @@ def handleInput_simple(command: str, node_list: list):
         for node in node_list:
             node_str = getPropertyFileName(node).replace(".properties", "")
             host_na, host_name, host_password = getInformationFromNodeStr(node_str)
+            if host_na is None:
+                continue
             node_controller = Controller(node_str, host_na, host_name, host_password)
             node_controller.killNode()
     else:
