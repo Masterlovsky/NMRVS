@@ -121,13 +121,14 @@ def readNa_remote(node_str, node_na_csv="Node_NA.csv") -> str:
 
 
 def welCome(node_na_csv="Node_NA.csv"):
-    print("Welcome to delay-generate script Ver1.0")
-    print("=" * 50)
+    print("=" * 80)
+    print("++++ Welcome to NMRVS-DelayGenerator script Ver1.0 ++++")
+    print("=" * 80)
     print("Input some delay messages if you want to create delay file.\n"
           "For example, create delay of two nodes you can tap in : Node_1 Node_2 <delay> or 1 2 <delay>\n"
           "Create delay of Simulation nodes, you can tap in: s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>")
     print("If you have created all the delay message, press the 'enter' button to stop the input process")
-    print("=" * 50)
+    print("=" * 80)
     print("All possible nodes are list as follows: " + getAllNodes(node_na_csv))
 
 
@@ -261,6 +262,7 @@ def handleSimulationNode(msg: str, delay_path: str):
         node_ID = node_ID.replace("Node_", "")
     if "Node" in node_ID:
         node_ID = node_ID.replace("Node", "")
+    node_ID = ("0" * 8 + node_ID)[-8:]
     line = node_ID + " " + level + " " + delay_1 + " " + delay_2 + " " + delay_3 + " " + "\n"
     output = delay_path + "simulation_delay.txt"
     with open(output, "a") as f:
@@ -277,5 +279,5 @@ if __name__ == '__main__':
     remote_path = ENS_HOME + "delay.txt"
     remote_s_path = ENS_HOME + "simulation_delay.txt"
     local_s_path = delayPath + "simulation_delay.txt"
-    sendDelayFile(local_path, remote_path, used_nodes, "Node_NA.csv")
-    sendSimulationDelayFile(local_s_path, remote_s_path, "Node_NA.csv")
+    # sendDelayFile(local_path, remote_path, used_nodes, "Node_NA.csv")
+    # sendSimulationDelayFile(local_s_path, remote_s_path, "Node_NA.csv")

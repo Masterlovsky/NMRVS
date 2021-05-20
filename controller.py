@@ -215,7 +215,8 @@ def getAllNodes(node_na_csv="Node_NA.csv"):
 
 
 def welCome():
-    print("Welcome to Node controller script Ver1.0")
+    print("=" * 80)
+    print("++++ Welcome to NMRVS-Controller script Ver1.0 ++++")
     print("=" * 80)
     print("This script can be use to start, stop or kill some ENS nodes\n"
           "For example, \n"

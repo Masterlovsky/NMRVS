@@ -30,10 +30,17 @@ s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>
 # delay_l1~delay_l3 is the common delay of level1~3 nodes, these three parameter can be omitted, default is [100,50,10].
 ```
 
-### 3. topologyShow.py
+### 3. topologyCollector.py
+```shell
+# 启动拓扑监听之前需要启动mysql并在数据库中建立"nmrvs"数据表
+# 执行topoCollector进行拓扑收集：
+python3 topoCollector.py
+```
 
-##Todo
-1. In **topo.show**, how to find the root_node faster? 
-
-Use the node_parent table? check if root_node's parent == null?
-
+### 4. topoShow.py
+```shell
+# 使用当前数据库中的数据构建拓扑并生成html文件用于展示
+# 执行以下命令：
+python3 topoShow.py
+# 将生成的html文件打开即可
+``` 
