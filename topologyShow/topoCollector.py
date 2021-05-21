@@ -11,6 +11,9 @@ import pymysql
 
 ADDRESS = ("::1", 9000)
 MSG_PARENT = "0a"
+MSG_PARENT_REMOVE = "0b"
+DB_USER = "root"
+DB_PASSWORD = "123456"
 
 
 def resolvePacket(data_hex):
@@ -19,8 +22,6 @@ def resolvePacket(data_hex):
     :param data_hex: 0x0a1111111122222222
     :return: nodeID = 11111111 , parentID = 22222222
     """
-    if data_hex[0:2] != MSG_PARENT:
-        raise Exception("Warning, invalid packet header!\n")
     nodeID = data_hex[2:10]
     parentID = data_hex[10:18]
     nodeIsReal = data_hex[18:20]
@@ -56,8 +57,19 @@ class DataBase(object):
         conn.close()
         # print("row_all: " + str(row_all))
 
+    def deleteByID(self, node_id):
+        conn = pymysql.connect(host=self.host, user=self.user, passwd=self.passwd, port=self.port, db="nmrvs",
+                               charset="utf8")
+        cursor = conn.cursor()
+        delete_sql = "DELETE from node_parent WHERE NodeID = {};".format(node_id)
+        cursor.execute(delete_sql)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        # print("row_all: " + str(row_all))
 
-if __name__ == '__main__':
+
+def run():
     # 创建套接字
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     # 绑定
@@ -73,10 +85,14 @@ if __name__ == '__main__':
             # if receive_data.decode("utf-8") == "exit":
             #     flag = False
             data = receive_data.hex()
-            nodeId, parentId, isReal = resolvePacket(data)
-            # writeToCsv(nodeId, parentId)
-            db = DataBase("root", "m97z04l05")
-            db.writeToDataBase(nodeId, parentId, isReal)
+            db = DataBase(DB_USER, DB_PASSWORD)
+            if data[0:2] == MSG_PARENT:
+                nodeId, parentId, isReal = resolvePacket(data)
+                # writeToCsv(nodeId, parentId)
+                db.writeToDataBase(nodeId, parentId, isReal)
+            elif data[0:2] == MSG_PARENT_REMOVE:
+                nodeId = data[2:10]
+                db.deleteByID(nodeId)
             print("from: " + str(addr) + " receive: " + data)
             # client_socket.send("success!".encode("utf-8"))
             client_socket.close()
@@ -85,3 +101,10 @@ if __name__ == '__main__':
             break
     # 关闭套接字
     sock.close()
+
+
+if __name__ == '__main__':
+    run()
+    # db = DataBase("root", "m97z04l05")
+    # db.deleteByID("00000003")
+    # # db.writeToDataBase("00000002", "00000001", "01")

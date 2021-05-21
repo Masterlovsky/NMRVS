@@ -75,13 +75,13 @@ def generateTree(data: list):
         Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes", chart_id="masterlovsky_tree_01"))
             .add("",
                  [tree_data],
-                 symbol="emptyCircle",
+                 # symbol="emptyCircle",
                  symbol_size=10,
                  # orient="TB",
                  initial_tree_depth=3,
                  # label_opts=opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center"),
                  tooltip_opts=opts.TooltipOpts(formatter="id: '{b}', isReal: {c}"),
-                 itemstyle_opts=opts.ItemStyleOpts(color="orange"),
+                 itemstyle_opts=opts.ItemStyleOpts(color="pink"),
                  )
             .set_global_opts(title_opts=opts.TitleOpts(title="Tree-Nodes"))
     )
@@ -139,9 +139,11 @@ def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
 def _dataFormatterHelp(root_node: Node):
     if root_node.getVal() == "01":
         _label = opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center")
+        _symbol = "circle"
     else:
-        _label = opts.LabelOpts(color="red", font_weight="bold", horizontal_align="center", vertical_align="center")
-    res_dict = {"name": root_node.getName(), "value": root_node.getVal(), "label": _label,
+        _label = opts.LabelOpts(color="grey", font_weight="bold", horizontal_align="center", vertical_align="center")
+        _symbol = "emptyCircle"
+    res_dict = {"name": root_node.getName(), "value": root_node.getVal(), "label": _label, "symbol": _symbol,
                 "children": [_dataFormatterHelp(child) for child in root_node.children]}
     return res_dict
 
