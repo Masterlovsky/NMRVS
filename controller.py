@@ -171,7 +171,7 @@ class SimulationController(object):
         except socket.timeout:
             print("Warning, Node " + node_id + " receive timeout!")
             recv = ""
-        if recv.startswith("11"):
+        if recv.startswith("12"):
             print("response message is: " + recv + ", successfully start Node " + node_id)
         else:
             if recv != "":
