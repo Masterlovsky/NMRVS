@@ -12,7 +12,8 @@ import pymysql
 import json
 
 ROOT_STR = "00000000"
-
+DB_USER = "root"
+DB_PASSWORD = "123456"
 
 class Node(object):
     def __str__(self) -> str:
@@ -159,7 +160,7 @@ def dataFormatter(root_node):
 
 def run():
     # nodes = csvToDict("NodeLink.csv")
-    relation_dict, isReal_dict = dataBaseToDict(DataBase("root", "m97z04l05").readDatabase())
+    relation_dict, isReal_dict = dataBaseToDict(DataBase(DB_USER, DB_PASSWORD).readDatabase())
     root_list = findRootsByDict(relation_dict)
     data_gen = []
     for root_str in root_list:
