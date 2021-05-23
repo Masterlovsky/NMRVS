@@ -73,7 +73,8 @@ def generateTree(data: list):
     for series in data:
         tree_data["children"].append(series)
     c = (
-        Tree(init_opts=opts.InitOpts(theme=ThemeType.WHITE, page_title="ResolveNodes", chart_id="masterlovsky_tree_01"))
+        Tree(init_opts=opts.InitOpts(width="1280px", height="950px", theme=ThemeType.WHITE, page_title="ResolveNodes",
+                                     chart_id="masterlovsky_tree_01"))
             .add("",
                  [tree_data],
                  # symbol="emptyCircle",

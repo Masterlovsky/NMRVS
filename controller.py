@@ -152,7 +152,7 @@ class SimulationController(object):
             print("Warning, Node " + node_id + " receive timeout!")
             recv = ""
         if recv.startswith("11"):
-            print("response message is: " + recv + ", successfully start Node " + node_id)
+            print("response message is: " + recv + ", start Node " + node_id + "  successfully!")
         else:
             if recv != "":
                 print("Unsupported message!, response is: " + recv)
@@ -172,7 +172,7 @@ class SimulationController(object):
             print("Warning, Node " + node_id + " receive timeout!")
             recv = ""
         if recv.startswith("12"):
-            print("response message is: " + recv + ", successfully start Node " + node_id)
+            print("response message is: " + recv + ", stop Node " + node_id + " successfully!")
         else:
             if recv != "":
                 print("Unsupported message!, response is: " + recv)
@@ -359,7 +359,11 @@ def handleSimulation(msg: str):
         for node in start_node_final_list:
             node = getNodeStrNum(node)
             sc = SimulationController(SIMULATION_IP, SIMULATION_PORT)
-            sc.start(node)
+            try:
+                sc.start(node)
+            except Exception as e:
+                print("start Node filed, exception is: \n" + str(e))
+                continue
 
     elif msg_list[0] == "stop":
         stop_node_list = msg_list[1:]
@@ -367,7 +371,11 @@ def handleSimulation(msg: str):
         for node in stop_node_final_list:
             node = getNodeStrNum(node)
             sc = SimulationController(SIMULATION_IP, SIMULATION_PORT)
-            sc.stop(node)
+            try:
+                sc.stop(node)
+            except Exception as e:
+                print("start Node filed, exception is: \n" + str(e))
+                continue
     else:
         print("Valid command!")
         return
