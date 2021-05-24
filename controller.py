@@ -106,7 +106,7 @@ class Controller(Remote):
         if recv.startswith("5a"):
             print("response message is: " + recv + ", successfully stop " + self.node)
         s.close()
-        time.sleep(3)
+        time.sleep(1)
         self.killNode()
 
     def killNode(self):
@@ -152,7 +152,7 @@ class SimulationController(object):
             print("Warning, Node " + node_id + " receive timeout!")
             recv = ""
         if recv.startswith("11"):
-            print("response message is: " + recv + ", start Node " + node_id + "  successfully!")
+            print("response message is: " + recv + ", start Node " + node_id + " successfully!")
         else:
             if recv != "":
                 print("Unsupported message!, response is: " + recv)
