@@ -4,13 +4,16 @@ By mzl 2021.03.10 version 1.0
 Used to start Node
 """
 import re
+import socket
 import paramiko
 import pandas as pd
 import os
 
 ENS_HOME = "/home/resolution/ens/"
-SIMULATION_HOME = "/home/resolution/ens/"
+SIMULATION_HOME = "/root/xw/nmrsim-v2.1_v6/nmrsim/nmr/network/"
 SIMULATION_DEFAULT_DELAY = ["100", "50", "10"]
+SIMULATION_IP = "2400:dd01:1037:201:192:168:47:198"
+SIMULATION_PORT = 8888
 
 
 class Remote(object):
@@ -36,6 +39,24 @@ class Remote(object):
         ssh.close()
         return out_msg.decode(), err_msg.decode()
 
+    def sendDelayFileUpdateMsg(self):
+        """
+        For all nodes has been started on the server, send update delay configuration message
+        """
+        msg = "6a11111111"
+        # check if the node is running. If the node is running, send update delay file msg.
+        command = "ps -aux |grep java"
+        out_msg, error_msg = self.send_command(command)
+        for line in out_msg.split("\n"):
+            if "ens.jar" in line and ".properties" in line:
+                node_str = line.split()[-1].replace(".properties", "")
+                address = readIP_remote(node_str)
+                s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_DGRAM)
+                s.sendto(bytes.fromhex(msg), address)
+                recv, addr = s.recvfrom(1024)
+                print("Node " + node_str + " is running, update delay info, send " + msg + " to " + str(
+                    addr[0:2]) + ", receive is: " + recv.hex())
+
 
 class Properties(object):
     properties = ''
@@ -60,7 +81,7 @@ def getNodeLocation_pd(node_na_file):
     return csv
 
 
-def readNa(node_str):
+def readLocalNa(node_str):
     """
     根据节点读取配置文件中对应的NA
     @param node_str:
@@ -84,15 +105,15 @@ def readNa(node_str):
     return result
 
 
-def readNa_remote(node_str, node_na_csv="Node_NA.csv") -> str:
+def readIP_remote(node_str, node_na_csv="Node_NA.csv") -> tuple:
     """
-    根据节点读取配置文件中对应的NA为纯数字格式
+    根据节点读取配置文件中对应的NA为IP地址格式
     @param node_na_csv: 读取的配置文件
     @param node_str: Node ID
-    @return: like: 2400dd01103702010192016800470198
+    @return: like: 2400:dd01:1037:0201:0192:0168:0047:0198
     """
     # 读取ip地址并建立连接
-    if "node" in node_str or "Node" in node_str:
+    if "node" in node_str or "Node_" in node_str:
         filename = node_str + ".properties"
     elif re.match(r"\d+", node_str):
         filename = "Node_" + node_str + ".properties"
@@ -100,8 +121,6 @@ def readNa_remote(node_str, node_na_csv="Node_NA.csv") -> str:
     else:
         filename = ""
     node_na_pd = getNodeLocation_pd(node_na_csv)
-    # print(node_na_pd["Node"].tolist())
-    result = ""
     if node_str in node_na_pd["Node"].tolist():
         host = "".join(node_na_pd["NA"][node_na_pd["Node"] == node_str].values)
         name = "".join(node_na_pd["Name"][node_na_pd["Node"] == node_str].values)
@@ -111,12 +130,45 @@ def readNa_remote(node_str, node_na_csv="Node_NA.csv") -> str:
         out_msg, err_msg = remote.send_command(command)
         properties = Properties(out_msg).getProperties()
         nodeNA = properties["NODE_NA"].strip()
+        level = properties["NODE_LEVEL"].strip()
+        basicPort = properties["BASIC_PORT"].strip()
+        return nodeNA, int(level) + int(basicPort)
+    else:
+        return "", 0
+
+
+def readNa_remote(node_str, node_na_csv="Node_NA.csv") -> str:
+    """
+    根据节点读取配置文件中对应的NA为纯数字格式
+    @param node_na_csv: 读取的配置文件
+    @param node_str: Node ID
+    @return: like: 2400dd01103702010192016800470198
+    """
+    # 读取ip地址
+    nodeNA, _ = readIP_remote(node_str, node_na_csv)
+    # 处理IP地址，将IPv6和IPv4分开讨论
+    result = ""
+    if nodeNA == "":
+        return result
+    if ":" in nodeNA:
         nodeNA_list = nodeNA.split(":")
+        if len(nodeNA_list) != 8:
+            # 2400:dd01:1000::1
+            index = nodeNA.find("::")
+            nodeNA = nodeNA[0:index + 1] + "0:" * (8 - len(nodeNA_list) + 1) + nodeNA[index + 2:]
         for i in nodeNA_list:
             if len(i) < 4:
                 result += '0' * (4 - len(i)) + i
             else:
                 result += i
+    if "." in nodeNA:
+        nodeNA_list = nodeNA.split(".")
+        for i in nodeNA_list:
+            if len(i) < 4:
+                result += '0' * (4 - len(i)) + i
+            else:
+                result += i
+        result = "0" * 16 + result
     return result
 
 
@@ -139,8 +191,7 @@ def getAllNodes(node_na_csv):
 
 def getInputMsg():
     """
-    获取用户输入的信息
-    @return:
+    get input messages
     """
     flag = 1
     all_msg = []
@@ -165,6 +216,9 @@ def getInputMsgFromFile(file) -> list:
 
 
 def handle(input_msgs, delay_path="./"):
+    """
+    handle all input command
+    """
     simulationFlag = False
     initSimulation(delay_path)
     config_nodes = set()
@@ -206,6 +260,14 @@ def handle(input_msgs, delay_path="./"):
 
 
 def sendDelayFile(local, remote, nodes, node_na_csv):
+    """
+    Send real nodes delay.txt file, and send "delayMap update request message" to all related node
+     which has been started on the server
+    :param local: local path of simulationDelayFile
+    :param remote: remote path of simulationDelayFile
+    :param nodes: related ENSNodes
+    :param node_na_csv: server configuration file
+    """
     csv = getNodeLocation_pd(node_na_csv)
     na_set = set()
     for node in nodes:
@@ -214,20 +276,40 @@ def sendDelayFile(local, remote, nodes, node_na_csv):
     for na in na_set:
         name = "".join(csv["Name"][csv["NA"] == na].values[0])
         password = "".join(csv["Password"][csv["NA"] == na].values[0])
-        sftp = Remote(na, name, password).my_connect().open_sftp()
-        sftp.put(local, remote)
-    print('=' * 50)
-    print("Delay files are successfully sent to the server which contains the relevant configuration nodes")
+        try:
+            rm = Remote(na, name, password)
+            sftp = rm.my_connect().open_sftp()
+            sftp.put(local, remote)
+            print('=' * 50)
+            print("Delay files are successfully sent to the server which contains the relevant configuration nodes")
+            sftp.close()
+            rm.sendDelayFileUpdateMsg()
+        except Exception as e:
+            print("Send delay file failed, check your connection!")
+            print(e)
 
 
 def sendSimulationDelayFile(local, remote, node_na_csv):
+    """
+    Send delayFile to simulation platform and send update msg to simulation platform.
+    :param local: local path of simulationDelayFile
+    :param remote: remote path of simulationDelayFile
+    :param node_na_csv: server configuration file
+    """
     csv = getNodeLocation_pd(node_na_csv)
     name = csv["Name"][csv["Node"] == "Simulation"].values[0]
     password = csv["Password"][csv["Node"] == "Simulation"].values[0]
     na = csv["NA"][csv["Node"] == "Simulation"].values[0]
-    sftp = Remote(na, name, password).my_connect().open_sftp()
-    sftp.put(local, remote)
-    print("Simulation Delay File is successfully sent to the server")
+    try:
+        sftp = Remote(na, name, password).my_connect().open_sftp()
+        sftp.put(local, remote)
+        print('=' * 50)
+        print("Simulation Delay files are successfully sent to the server!")
+        sftp.close()
+        sendSimulationUpdateMsg()
+    except Exception as e:
+        print("Send simulation delay file failed, check your connection!")
+        print(e)
 
 
 def initSimulation(path: str, file: str = "simulation_delay.txt") -> bool:
@@ -237,6 +319,21 @@ def initSimulation(path: str, file: str = "simulation_delay.txt") -> bool:
         return True
     else:
         return False
+
+
+def sendSimulationUpdateMsg():
+    """
+    send to simulation platform a msg to trigger on delayFile update.
+    """
+    msg = "6a11111111"
+    address = (SIMULATION_IP, SIMULATION_PORT)
+    try:
+        s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_DGRAM)
+        s.sendto(bytes.fromhex(msg), address)
+        recv, addr = s.recvfrom(1024)
+        print("send " + msg + " to " + str(addr[0:2]) + ", receive is: " + recv.hex())
+    except Exception as e:
+        print(e)
 
 
 def handleSimulationNode(msg: str, delay_path: str):
@@ -275,15 +372,21 @@ def handleSimulationNode(msg: str, delay_path: str):
     f.close()
 
 
-if __name__ == '__main__':
-    welCome()
+def run():
     all_input = getInputMsg()
     delayPath = os.getcwd() + "/"
     used_nodes = handle(all_input, delayPath)
     print("File delay.txt has been created!")
     local_path = delayPath + "delay.txt"
     remote_path = ENS_HOME + "delay.txt"
-    remote_s_path = ENS_HOME + "simulation_delay.txt"
+    remote_s_path = SIMULATION_HOME + "delay.txt"
     local_s_path = delayPath + "simulation_delay.txt"
-    # sendDelayFile(local_path, remote_path, used_nodes, "Node_NA.csv")
-    # sendSimulationDelayFile(local_s_path, remote_s_path, "Node_NA.csv")
+    sendDelayFile(local_path, remote_path, used_nodes, "Node_NA.csv")
+    # 如果设置了仿真节点相关的配置会创建simulation_delay.txt
+    if os.path.exists(local_s_path):
+        sendSimulationDelayFile(local_s_path, remote_s_path, "Node_NA.csv")
+
+
+if __name__ == '__main__':
+    welCome()
+    run()
