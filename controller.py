@@ -106,7 +106,7 @@ class Controller(Remote):
         if recv.startswith("5a"):
             print("response message is: " + recv + ", successfully stop " + self.node)
         s.close()
-        time.sleep(1)
+        time.sleep(3)
         self.killNode()
 
     def killNode(self):
