@@ -6,14 +6,16 @@ Used to show Topology of Nodes
 from pyecharts import options as opts
 from pyecharts.charts import Tree
 from pyecharts.globals import ThemeType
+from pyecharts.commons.utils import JsCode
 import numpy as np
 import pandas as pd
 import pymysql
 import json
 
-ROOT_STR = "00000000"
+ROOT_STR = "0000000000"
 DB_USER = "root"
 DB_PASSWORD = "123456"
+
 
 class Node(object):
     def __str__(self) -> str:
@@ -67,13 +69,13 @@ def generateTree(data: list):
     根据json数据生成树结构的html代码
     :param data:
     """
-    tree_data = {"name": "根节点管理系统", "children": [],
+    tree_data = {"name": "根节点管理系统", "children": [], "symbol": "rect", "symbolSize": 14,
                  "label": opts.LabelOpts(font_size=14, font_weight="bold", horizontal_align="center",
                                          vertical_align="center", distance=10)}
     for series in data:
         tree_data["children"].append(series)
     c = (
-        Tree(init_opts=opts.InitOpts(width="1280px", height="950px", theme=ThemeType.WHITE, page_title="ResolveNodes",
+        Tree(init_opts=opts.InitOpts(width="1280px", height="750px", theme=ThemeType.WHITE, page_title="ResolveNodes",
                                      chart_id="masterlovsky_tree_01"))
             .add("",
                  [tree_data],
@@ -139,11 +141,20 @@ def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
 
 
 def _dataFormatterHelp(root_node: Node):
+    _formatter = JsCode(
+        '''
+        function(params) {
+            return params.name.substring(0,8);
+        }
+        '''
+    )
     if root_node.getVal() == "01":
-        _label = opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center")
+        _label = opts.LabelOpts(font_weight="bold", horizontal_align="center", vertical_align="center",
+                                formatter=_formatter)
         _symbol = "circle"
     else:
-        _label = opts.LabelOpts(color="grey", font_weight="bold", horizontal_align="center", vertical_align="center")
+        _label = opts.LabelOpts(color="grey", font_weight="bold", horizontal_align="center", vertical_align="center",
+                                formatter=_formatter)
         _symbol = "emptyCircle"
     res_dict = {"name": root_node.getName(), "value": root_node.getVal(), "label": _label, "symbol": _symbol,
                 "children": [_dataFormatterHelp(child) for child in root_node.children]}

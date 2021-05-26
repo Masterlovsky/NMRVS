@@ -16,7 +16,13 @@ DB_USER = "root"
 DB_PASSWORD = "123456"
 
 
-def resolvePacket(data_hex):
+def int2HexStr(num: int, length: int):
+    zero_len = length - len(str(num))
+    assert zero_len >= 0
+    return "0" * zero_len + str(num)
+
+
+def resolvePacket(data_hex: str):
     """
     根据16进制字符串报文返回NodeID和ParentID
     :param data_hex: 0x0a1111111122222222
@@ -25,7 +31,10 @@ def resolvePacket(data_hex):
     nodeID = data_hex[2:10]
     parentID = data_hex[10:18]
     nodeIsReal = data_hex[18:20]
-    return nodeID, parentID, nodeIsReal
+    nodeLevel = data_hex[20:22]
+    nid = nodeID + nodeLevel
+    pid = parentID + int2HexStr(int(nodeLevel) - 1, 2)
+    return nid, pid, nodeIsReal
 
 
 def writeToCsv(nodeid, parentid):
@@ -91,7 +100,7 @@ def run():
                 # writeToCsv(nodeId, parentId)
                 db.writeToDataBase(nodeId, parentId, isReal)
             elif data[0:2] == MSG_PARENT_REMOVE:
-                nodeId = data[2:10]
+                nodeId = data[2:12]
                 db.deleteByID(nodeId)
             print("from: " + str(addr) + " receive: " + data)
             # client_socket.send("success!".encode("utf-8"))
