@@ -97,17 +97,21 @@ class Controller(Remote):
         try:
             s.connect((node_NA, node_port))
         except socket.error:
-            print("Can't connected to node: " + self.node + ". Maybe this node has been stopped!")
+            print("Can't connect to node: " + self.node + ". Maybe this node has been stopped!")
             return
         timestamp = "11111111"
         stop_command_str = "59" + node_id + timestamp
         s.send(bytes.fromhex(stop_command_str))
-        recv = s.recv(1024).hex()
-        if recv.startswith("5a"):
-            print("response message is: " + recv + ", successfully stop " + self.node)
+        try:
+            recv = s.recv(1024).hex()
+            if recv.startswith("5a01"):
+                print("response message is: " + recv + ", successfully stop " + self.node)
+            else:
+                print("response message is: " + recv + self.node + " stop error")
+        except Exception as e:
+            print(e)
+            print("Can't receive shutdown response message")
         s.close()
-        time.sleep(2)
-        # self.killNode()
 
     def killNode(self):
         """
