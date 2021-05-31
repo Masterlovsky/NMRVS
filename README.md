@@ -1,11 +1,23 @@
 # NMRVS - SEANet
+
 **Name Mapping Resolution Verification System** for **SEANet**
-- All right reserved by DSP.
+
+- *All right reserved by 3NMedia.*
+
 ## Description
-> The project is made for verifying the NMR system
+
+> This project is made for verifying the **NMR** system
+
 ## How to use
 
+- Firstly, you should install python3(ver>3.6). Then run the following command,
+```shell
+$ python3 -m pip install --upgrade pip
+$ pip3 install -r requirement.txt
+```
+
 ### 1. controller.py
+
 ```shell
 # For example, 
 # start some nodes you can tap in : 
@@ -21,6 +33,7 @@ exit
 ```
 
 ### 2. delay_gen.py
+
 ```shell
 # For example, create delay of two nodes you can tap in : 
 Node_1 Node_2 <delay> or 1 2 <delay>
@@ -31,6 +44,7 @@ s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>
 ```
 
 ### 3. topologyCollector.py
+
 ```shell
 # 启动拓扑监听之前需要启动mysql并在数据库中建立"nmrvs"数据表
 # 执行topoCollector进行拓扑收集：
@@ -38,6 +52,7 @@ python3 topoCollector.py
 ```
 
 ### 4. topoShow.py
+
 ```shell
 # 使用当前数据库中的数据构建拓扑并生成html文件用于展示
 # 执行以下命令：
