@@ -114,6 +114,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-    # db = DataBase("root", "m97z04l05")
-    # db.deleteByID("00000003")
-    # # db.writeToDataBase("00000002", "00000001", "01")
