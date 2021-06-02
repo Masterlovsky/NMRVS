@@ -328,10 +328,12 @@ def sendSimulationUpdateMsg():
     msg = "6a11111111"
     address = (SIMULATION_IP, SIMULATION_PORT)
     try:
-        s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_DGRAM)
-        s.sendto(bytes.fromhex(msg), address)
-        recv, addr = s.recvfrom(1024)
-        print("send " + msg + " to " + str(addr[0:2]) + ", receive is: " + recv.hex())
+        s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_STREAM)
+        s.connect(address)
+        s.send(bytes.fromhex(msg))
+        recv = s.recv(1024)
+        print("Send simulation update Msg: " + msg + " to " + SIMULATION_IP + ":" + str(
+            SIMULATION_PORT) + " , receive is: " + recv.hex())
     except Exception as e:
         print(e)
 
