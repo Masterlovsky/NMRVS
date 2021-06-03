@@ -52,10 +52,14 @@ class Remote(object):
                 node_str = line.split()[-1].replace(".properties", "")
                 address = readIP_remote(node_str)
                 s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_DGRAM)
+                s.settimeout(5)
                 s.sendto(bytes.fromhex(msg), address)
-                recv, addr = s.recvfrom(1024)
-                print("Node " + node_str + " is running, update delay info, send " + msg + " to " + str(
-                    addr[0:2]) + ", receive is: " + recv.hex())
+                try:
+                    recv, addr = s.recvfrom(1024)
+                    print("Node " + node_str + " is running, update delay info, send " + msg + " to " + str(
+                        addr[0:2]) + ", receive is: " + recv.hex())
+                except Exception as e:
+                    print(e)
 
 
 class Properties(object):
