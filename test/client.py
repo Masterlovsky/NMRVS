@@ -1,17 +1,21 @@
+#! /usr/bin/python3
+"""
+By mzl 2021.06.09 version 1.0
+Used to send message to NMR nodes
+"""
 import socket
-import sys
 import argparse
 
 
 def getparser():
     parser = argparse.ArgumentParser(description="NMR client python version")
-    parser.add_argument('--ip', '-i', required=True, type=str, help="IPv4/IPv6 address of NMR node")
+    parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('--port', '-p', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', required=True, type=str,
                         choices=['register', 'deregister', 'resolve', 'resolve+tlv', 'rnl', 'custom'],
                         help="Which kind of message to send")
-    parser.add_argument('--number', '-n', required=False, default=1, type=int)
+    parser.add_argument('--number', '-n', required=False, default=1, type=int, help="Number of packets to send.")
     parser.add_argument('--message', '-m', required=False, type=str,
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
     return parser
@@ -61,18 +65,20 @@ def getMsg(command: str):
 def run():
     parser = getparser()
     args = parser.parse_args()
-    # argsNum = len(sys.argv)
-    # number = 1
-    # if argsNum < 4:
-    #     print("Input format wrong! Use the script as: python3 client.py <IP> <port> <command> (option)<number>")
-    #     return
-    # if argsNum == 5:
-    #     number = int(sys.argv[4])
-    IP = sys.argv[1]
-    port = sys.argv[2]
-    ADDRESS = (IP, int(port))
-    family = checkIP(IP)
-    msg, p = getMsg(sys.argv[3])
+    IP = args.ip
+    port = args.port
+    ADDRESS = (IP, port)
+    family = checkIP(IP)  # check IPv4/IPv6
+    command = args.command
+    if command == "custom":
+        msg = args.message
+        if msg is None:
+            print("Custom message is empty, please add '-m <msg>'.")
+            return
+        p = 0
+    else:
+        msg, p = getMsg(command)
+    number = args.number
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
     for i in range(number):
@@ -81,7 +87,10 @@ def run():
         s.sendto(bytes.fromhex(msg), ADDRESS)
         try:
             recv, addr = s.recvfrom(1024)
-            isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+            if p != 0:
+                isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+            else:
+                isSuccess = "success"
             print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
         except socket.timeout:
             print("Can't receive msg! Socket timeout")
@@ -90,9 +99,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-# while True:
-#     client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#     data = input("input: ")
-#     client.sendto(data.encode(encoding="utf-8"), ADDRESS)
-#     recv, addr = client.recvfrom(1024)
-#     print(recv.decode(encoding="UTF-8"), "from", addr)
