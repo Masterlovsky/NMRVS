@@ -20,7 +20,7 @@ def getparser():
                              "'deregister' = 'd'; "
                              "'multi-deregister' = 'md'; "
                              "'eid': EID resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
-                             "'tlc': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
+                             "'tlv': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
                              "'rnl': get rnl response from resolve node; "
                              "'custom': user defined payload message, use with parameter -m <msg>; ")
     parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
@@ -36,6 +36,11 @@ def getparser():
 
 
 def checkIP(ip: str):
+    """
+    check IPv4 or IPv6
+    :param ip: ip address
+    :return: socket family
+    """
     if ":" in ip:
         return socket.AF_INET6
     elif "." in ip:

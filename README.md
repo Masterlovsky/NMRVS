@@ -58,4 +58,39 @@ python3 topoCollector.py
 # 执行以下命令：
 python3 topoShow.py
 # 将生成的html文件打开即可
+```
+
+### 5. client.py
+
+```shell
+# python版本的模拟客户端，用于向解析节点发送各种udp报文，验证功能
+# 执行以下命令：
+python3 client.py -i <IP> -p <port> -c <command> -n <number>
 ``` 
+- 参数设定：
+  
+    **-h** : help 查看帮助文档 (非必须参数) 
+  
+     **-i** : 发送到的目的IP地址，支持IPv4和IPv6 **(必须参数)**
+  
+    **-p** : 发送到的目的端口号，默认值为10061，即解析节点Level1的监听端口 **(必须参数)** 
+     
+    **-c** : 发送的请求报文类型，(非必须参数) 具体包括：
+  
+       注册报文：'register' or 'r'
+       注销报文：'deregister' or 'd' 
+       批量注销报文： 'multi-deregister' or 'md' 
+       EID解析报文： 'eid' ,默认使用 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"作为EID 
+       tlv解析报文： 'tlv' ,默认使用 "0000000000000000000000000000000000000000"作为EID, 使用"010101020102"作为tlv 
+       rnl获取报文： 'rnl', 从解析节点获取RNL 
+       用户自定义报文： 'custom' (默认值)，一般配合 -m < msg > 参数使用 
+  
+    **-m** : 输入自定义的完整报文payload (非必须参数) 
+  
+    **-n** : 发送的报文数目，默认为**1** (非必须参数) 
+  
+    **-er** : 发送自定义EID注册报文(非必须参数) ，使用：-er + < EID + NA > 
+  
+    **-eq** : 发送自定义EID解析报文(非必须参数) ，使用：-eq + < EID > 
+  
+    **-ed** : 发送自定义EID注销报文(非必须参数) ，使用：-ed + < EID + NA > 
