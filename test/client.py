@@ -5,6 +5,12 @@ Used to send message to NMR nodes
 """
 import socket
 import argparse
+import time
+
+
+def getTimeStamp() -> str:
+    timeStamp = int(time.time())
+    return hex(timeStamp)[-8:]
 
 
 def getparser():
@@ -58,34 +64,35 @@ def getMsg(command: str, content: str = ""):
              position: 返回报文标志位的起始位置，用于判断指令是否执行成功
     """
     position = 0  # 标记返回报文成功的标志位的起始位置
+    timeStamp = getTimeStamp()
     if command == "register" or command == "r":
         position = 10
         msg = "6f34653039bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-              "030100d79df05b0006010101020102"
+              "030100" + timeStamp + "0006010101020102"
     elif command == "deregister" or command == "d":
         position = 10
-        msg = "733465303900bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb999999999999999999999999999999995f6061f4"
+        msg = "733465303900bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "resolve" or command == "e" or command == "eid":
         position = 2
-        msg = "7100000663653962bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb5f5896b3010101020102"
+        msg = "7100000663653962bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp + "010101020102"
     elif command == "EIDQuery" or command == "eq":
         position = 2
-        msg = "7100000663653962" + content + "5f5896b3010101020102"
+        msg = "7100000663653962" + content + timeStamp + "010101020102"
     elif command == "EIDRegister" or command == "er":
         position = 10
-        msg = "6f34653039" + content + "030100d79df05b0006010101020102"
+        msg = "6f34653039" + content + "030100" + timeStamp + "0006010101020102"
     elif command == "EIDDeregister" or command == "ed":
         position = 10
-        msg = "733465303900" + content + "5f6061f4"
+        msg = "733465303900" + content + timeStamp
     elif command == "resolve+tlv" or command == "tlv":
         position = 2
-        msg = "710000061234123400000000000000000000000000000000000000005f5896b3010101020102"
+        msg = "71000006123412340000000000000000000000000000000000000000" + timeStamp + "010101020102"
     elif command == "mulDeregister" or command == "multi-deregister" or command == "md":
         position = 10
-        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb999999999999999999999999999999995f6061f4"
+        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "rnl":
         position = 10
-        msg = "0d8888888812345678"
+        msg = "0d88888888" + timeStamp
     elif command == "r+":
         # todo
         position = 10

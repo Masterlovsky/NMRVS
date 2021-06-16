@@ -6,14 +6,16 @@ Used to show Topology of Nodes
 import threading
 import time
 import socket
-
+import yaml
 import pymysql
 
-ADDRESS = ("::1", 9000)
 MSG_PARENT = "0a"
 MSG_PARENT_REMOVE = "0b"
-DB_USER = "root"
-DB_PASSWORD = "123456"
+
+
+def readConf2Yml(path: str):
+    with open(path, 'r') as f:
+        return yaml.load(f.read(), Loader=yaml.FullLoader)
 
 
 def int2HexStr(num: int, length: int):
@@ -79,6 +81,10 @@ class DataBase(object):
 
 
 def run():
+    conf = readConf2Yml("conf.yml")
+    ADDRESS = (conf["COLLECTOR"]["ADDRESS"], conf["COLLECTOR"]["PORT"])
+    DB_USER = conf["DB"]["USER"]
+    DB_PASSWORD = conf["DB"]["PASSWORD"]
     # 创建套接字
     sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
     # 绑定

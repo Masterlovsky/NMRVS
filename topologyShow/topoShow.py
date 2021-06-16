@@ -7,14 +7,15 @@ from pyecharts import options as opts
 from pyecharts.charts import Tree
 from pyecharts.globals import ThemeType
 from pyecharts.commons.utils import JsCode
-import numpy as np
 import pandas as pd
 import pymysql
 import json
+import yaml
 
-ROOT_STR = "0000000000"
-DB_USER = "root"
-DB_PASSWORD = "123456"
+
+def readConf2Yml(path: str):
+    with open(path, 'r') as f:
+        return yaml.load(f.read(), Loader=yaml.FullLoader)
 
 
 class Node(object):
@@ -118,8 +119,8 @@ def dataBaseToDict(rolls: tuple) -> (dict, dict):
     return father_child_dict, node_dict
 
 
-def findRootsByDict(nodes_dict: dict) -> list:
-    return nodes_dict[ROOT_STR]
+def findRootsByDict(nodes_dict: dict, root_str: str) -> list:
+    return nodes_dict[root_str]
 
 
 def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:
@@ -172,8 +173,13 @@ def dataFormatter(root_node):
 
 def run():
     # nodes = csvToDict("NodeLink.csv")
-    relation_dict, isReal_dict = dataBaseToDict(DataBase(DB_USER, DB_PASSWORD).readDatabase())
-    root_list = findRootsByDict(relation_dict)
+    conf = readConf2Yml("conf.yml")
+    DB_HOST = conf["DB"]["HOST"]
+    DB_USER = conf["DB"]["USER"]
+    DB_PASSWORD = conf["DB"]["PASSWORD"]
+    ROOT_STR = conf["ROOT_STR"]
+    relation_dict, isReal_dict = dataBaseToDict(DataBase(DB_USER, DB_PASSWORD, DB_HOST).readDatabase())
+    root_list = findRootsByDict(relation_dict, ROOT_STR)
     data_gen = []
     for root_str in root_list:
         root = dataConstructor(root_str, relation_dict, isReal_dict)
