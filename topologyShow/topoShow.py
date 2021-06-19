@@ -120,7 +120,10 @@ def dataBaseToDict(rolls: tuple) -> (dict, dict):
 
 
 def findRootsByDict(nodes_dict: dict, root_str: str) -> list:
-    return nodes_dict[root_str]
+    if len(nodes_dict) == 0:
+        return []
+    else:
+        return nodes_dict[root_str]
 
 
 def dataConstructor(root: str, node_dict: dict, is_real_dict: dict) -> Node:

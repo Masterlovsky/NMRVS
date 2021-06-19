@@ -20,7 +20,7 @@ def getparser():
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', type=str, default="custom",
                         choices=['register', 'r', 'deregister', 'd', 'multi-deregister', 'md', 'eid', 'tlv', 'rnl',
-                                 'custom'],
+                                 'dm', 'delay-measure', 'custom'],
                         help="Input what kind of message to send, "
                              "'register' = 'r'; "
                              "'deregister' = 'd'; "
@@ -28,6 +28,7 @@ def getparser():
                              "'eid': EID resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
                              "'tlv': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
                              "'rnl': get rnl response from resolve node; "
+                             "'dm': delay measure from client to resolve node; "
                              "'custom': user defined payload message, use with parameter -m <msg>; ")
     parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
                         help="resolve self defined EID, use: -eq <EID>")
@@ -93,11 +94,11 @@ def getMsg(command: str, content: str = ""):
     elif command == "rnl":
         position = 10
         msg = "0d88888888" + timeStamp
-    elif command == "r+":
-        # todo
-        position = 10
-        msg = "0d8888888812345678"
+    elif command == "dm" or command == "delay-measure":
+        msg = "03" + timeStamp
+        position = 9999  # 选一个比较大的数当做标识
     else:
+        # todo : 批量随机注册实现？
         msg = ""
     return msg, position
 
@@ -134,7 +135,7 @@ def run():
         if command == "custom":
             msg = args.message
             if msg is None:
-                print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID>.")
+                print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID> or -ed <EID+NA>.")
                 return
             p = 0
         else:
@@ -146,14 +147,19 @@ def run():
         if msg == "":
             print("Getting message is none!")
             break
+        sendTimeStamp = time.time()
         s.sendto(bytes.fromhex(msg), ADDRESS)
         try:
             recv, addr = s.recvfrom(1024)
-            if p != 0:
+            delay = round((time.time() - sendTimeStamp) * 1000, 3)
+            if p != 0 and p != 9999:
                 isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
             else:
                 isSuccess = "success"
-            print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+            if p == 9999:
+                print("receive delay measure response msg, status: " + isSuccess + ", delay: " + str(delay) + "ms")
+            else:
+                print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
         except socket.timeout:
             print("Can't receive msg! Socket timeout")
     s.close()
