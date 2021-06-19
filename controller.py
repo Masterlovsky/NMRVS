@@ -51,7 +51,7 @@ class Properties(object):
         for line in self.properties.split("\n"):
             if line.find('=') > 0:
                 val = line.split('=')
-                proper_dict[val[0]] = val[1]
+                proper_dict[val[0]] = str(val[1]).strip()
         return proper_dict
 
 
@@ -91,16 +91,17 @@ class Controller(Remote):
         out_msg, err_msg = self.send_command(command)
         properties = Properties(out_msg).getProperties()
         node_id = properties["NODE_ID"]
-        node_NA = properties["NODE_NA"].strip()
+        node_NA = properties["NODE_NA"]
         node_port = int(properties["BASIC_PORT"]) + int(properties["NODE_LEVEL"])
         s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_STREAM)
+        timestamp = "11111111"
+        stop_command_str = "59" + node_id + timestamp
+        print(stop_command_str)
         try:
             s.connect((node_NA, node_port))
         except socket.error:
             print("Can't connect to node: " + self.node + ". Maybe this node has been stopped!")
             return
-        timestamp = "11111111"
-        stop_command_str = "59" + node_id + timestamp
         s.send(bytes.fromhex(stop_command_str))
         try:
             recv = s.recv(1024).hex()
