@@ -96,7 +96,6 @@ class Controller(Remote):
         s = socket.socket(family=socket.AF_INET6, type=socket.SOCK_STREAM)
         timestamp = "11111111"
         stop_command_str = "59" + node_id + timestamp
-        print(stop_command_str)
         try:
             s.connect((node_NA, node_port))
         except socket.error:
