@@ -20,7 +20,7 @@ def getparser():
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', type=str, default="custom",
                         choices=['register', 'r', 'deregister', 'd', 'multi-deregister', 'md', 'eid', 'tlv', 'rnl',
-                                 'dm', 'delay-measure', 'custom'],
+                                 'dm', 'delay-measure', 'agent', 'custom'],
                         help="Input what kind of message to send, "
                              "'register' = 'r'; "
                              "'deregister' = 'd'; "
@@ -28,6 +28,7 @@ def getparser():
                              "'eid': EID resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
                              "'tlv': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
                              "'rnl': get rnl response from resolve node; "
+                             "'agent': get rnl response from server-agent; "
                              "'dm': delay measure from client to resolve node; "
                              "'custom': user defined payload message, use with parameter -m <msg>; ")
     parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
@@ -94,6 +95,9 @@ def getMsg(command: str, content: str = ""):
     elif command == "rnl":
         position = 10
         msg = "0d88888888" + timeStamp
+    elif command == "connect" or command == "agent":
+        position = 10
+        msg = "1d88888888" + timeStamp
     elif command == "dm" or command == "delay-measure":
         msg = "03" + timeStamp
         position = 9999  # 选一个比较大的数当做标识

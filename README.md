@@ -83,6 +83,7 @@ python3 client.py -i <IP> -p <port> -c <command> -n <number>
        EID解析报文： 'eid' ,默认使用 "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"作为EID 
        tlv解析报文： 'tlv' ,默认使用 "0000000000000000000000000000000000000000"作为EID, 使用"010101020102"作为tlv 
        rnl获取报文： 'rnl', 从解析节点获取RNL
+       连接接入代理： 'agent', 连接接入代理，从接入代理获取RNL以及其他信息
        时延测量报文： 'dm', 测试从客户端到解析节点的时延
        用户自定义报文： 'custom' (默认值)，一般配合 -m < msg > 参数使用 
   
