@@ -176,7 +176,7 @@ def dataFormatter(root_node):
 
 def run():
     # nodes = csvToDict("NodeLink.csv")
-    conf = readConf2Yml("conf.yml")
+    conf = readConf2Yml("topoConf.yml")
     DB_HOST = conf["DB"]["HOST"]
     DB_USER = conf["DB"]["USER"]
     DB_PASSWORD = conf["DB"]["PASSWORD"]

@@ -8,12 +8,7 @@ import socket
 import paramiko
 import pandas as pd
 import os
-
-ENS_HOME = "/home/resolution/ens/"
-SIMULATION_HOME = "/root/xw/nmrsim-v2.1_v6/nmrsim/nmr/network/"
-SIMULATION_DEFAULT_DELAY = ["100", "50", "10"]
-SIMULATION_IP = "2400:dd01:1037:201:192:168:47:198"
-SIMULATION_PORT = 8888
+import yaml
 
 
 class Remote(object):
@@ -83,6 +78,11 @@ class Properties(object):
 def getNodeLocation_pd(node_na_file):
     csv = pd.read_csv(node_na_file)
     return csv
+
+
+def readConf2Yml(path: str):
+    with open(path, 'r') as f:
+        return yaml.load(f.read(), Loader=yaml.FullLoader)
 
 
 def readLocalNa(node_str):
@@ -222,6 +222,9 @@ def getInputMsgFromFile(file) -> list:
 def handle(input_msgs, delay_path="./"):
     """
     handle all input command
+    :param input_msgs: all input messages
+    :param delay_path: output file dir
+    :return:
     """
     simulationFlag = False
     initSimulation(delay_path)
@@ -394,5 +397,11 @@ def run():
 
 
 if __name__ == '__main__':
+    conf = readConf2Yml("conf.yaml")
+    ENS_HOME = conf["ENS_HOME"]
+    SIMULATION_HOME = conf["SIMULATION_HOME"]
+    SIMULATION_DEFAULT_DELAY = conf["SIMULATION_DEFAULT_DELAY"]
+    SIMULATION_IP = conf["SIMULATION_IP"]
+    SIMULATION_PORT = conf["SIMULATION_PORT"]
     welCome()
     run()

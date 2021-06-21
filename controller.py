@@ -10,10 +10,9 @@ import socket
 
 import pandas as pd
 import paramiko
+import yaml
 
-ENS_HOME = "/home/resolution/ens/"
-SIMULATION_IP = "2400:dd01:1037:201:192:168:47:198"
-SIMULATION_PORT = 8888
+
 
 
 class Remote(object):
@@ -182,6 +181,11 @@ class SimulationController(object):
                 print("Unsupported message!, response is: " + recv)
         s.close()
         time.sleep(1)
+
+
+def readConf2Yml(path: str):
+    with open(path, 'r') as f:
+        return yaml.load(f.read(), Loader=yaml.FullLoader)
 
 
 def getArgNum():
@@ -386,6 +390,10 @@ def handleSimulation(msg: str):
 
 
 if __name__ == '__main__':
+    conf = readConf2Yml("conf.yaml")
+    ENS_HOME = conf["ENS_HOME"]
+    SIMULATION_IP = conf["SIMULATION_IP"]
+    SIMULATION_PORT = conf["SIMULATION_PORT"]
     if len(sys.argv) > 1:
         handleInput_simple(sys.argv[1], [x for x in sys.argv[2:]])
     else:

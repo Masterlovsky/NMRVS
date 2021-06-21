@@ -81,7 +81,7 @@ class DataBase(object):
 
 
 def run():
-    conf = readConf2Yml("conf.yml")
+    conf = readConf2Yml("topoConf.yml")
     ADDRESS = (conf["COLLECTOR"]["ADDRESS"], conf["COLLECTOR"]["PORT"])
     DB_USER = conf["DB"]["USER"]
     DB_PASSWORD = conf["DB"]["PASSWORD"]
