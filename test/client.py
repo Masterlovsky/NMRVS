@@ -19,12 +19,12 @@ def getparser():
     parser.add_argument('--port', '-p', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', type=str, default="custom",
-                        choices=['register', 'r', 'deregister', 'd', 'multi-deregister', 'md', 'eid', 'tlv', 'rnl',
+                        choices=['register', 'r', 'deregister', 'd', 'batch-deregister', 'bd', 'eid', 'tlv', 'rnl',
                                  'dm', 'delay-measure', 'agent', 'custom'],
                         help="Input what kind of message to send, "
                              "'register' = 'r'; "
                              "'deregister' = 'd'; "
-                             "'multi-deregister' = 'md'; "
+                             "'batch-deregister' = 'bd'; "
                              "'eid': EID resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
                              "'tlv': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
                              "'rnl': get rnl response from resolve node; "
@@ -37,6 +37,8 @@ def getparser():
                         help="register self defined EID+NA,  use: -er <EID+NA>")
     parser.add_argument('--EIDDeregister', '-ed', required=False, type=str,
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
+    parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
+                        help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('--number', '-n', required=False, default=1, type=int, help="Number of packets to send.")
     parser.add_argument('--message', '-m', required=False, type=str,
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
@@ -77,6 +79,12 @@ def getMsg(command: str, content: str = ""):
     elif command == "resolve" or command == "e" or command == "eid":
         position = 2
         msg = "7100000663653962bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp + "010101020102"
+    elif command == "resolve+tlv" or command == "tlv":
+        position = 2
+        msg = "71000006123412340000000000000000000000000000000000000000" + timeStamp + "010101020102"
+    elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
+        position = 10
+        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "EIDQuery" or command == "eq":
         position = 2
         msg = "7100000663653962" + content + timeStamp + "010101020102"
@@ -86,12 +94,9 @@ def getMsg(command: str, content: str = ""):
     elif command == "EIDDeregister" or command == "ed":
         position = 10
         msg = "733465303900" + content + timeStamp
-    elif command == "resolve+tlv" or command == "tlv":
-        position = 2
-        msg = "71000006123412340000000000000000000000000000000000000000" + timeStamp + "010101020102"
-    elif command == "mulDeregister" or command == "multi-deregister" or command == "md":
+    elif command == "EIDBatchDeregister" or command == "ebd":
         position = 10
-        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + content + timeStamp
     elif command == "rnl":
         position = 10
         msg = "0d88888888" + timeStamp
@@ -135,11 +140,18 @@ def run():
             print("EID+NA length error!")
             return
         msg, p = getMsg("EIDDeregister", EIDNA)
+    elif args.EIDBatchDeregister is not None:
+        NA = args.EIDBatchDeregister
+        if len(NA) != 32:
+            print("NA length error!")
+            return
+        msg, p = getMsg("EIDBatchDeregister", NA)
     else:
         if command == "custom":
             msg = args.message
             if msg is None:
-                print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID> or -ed <EID+NA>.")
+                print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID> "
+                      "or -ed <EID+NA> or -ebd <NA>.")
                 return
             p = 0
         else:
