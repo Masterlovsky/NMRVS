@@ -1,5 +1,5 @@
 ENS_HOME: "/home/resolution/ens/"
 SIMULATION_HOME: "/root/xw/nmrsim-v2.1_v6/nmrsim/nmr/network/"
-SIMULATION_DEFAULT_DELAY: ["100", "50", "10"]
+SIMULATION_DEFAULT_DELAY: ["20", "10", "0"]
 SIMULATION_IP: "2400:dd01:1037:201:192:168:47:198"
 SIMULATION_PORT: 8888

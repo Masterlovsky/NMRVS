@@ -40,6 +40,8 @@ def getparser():
     parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('--number', '-n', required=False, default=1, type=int, help="Number of packets to send.")
+    parser.add_argument('--force', required=False, action="store_true", default=False,
+                        help="force send message without waiting response, use to increase PPS")
     parser.add_argument('--message', '-m', required=False, type=str,
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
     return parser
@@ -159,12 +161,15 @@ def run():
     number = args.number
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
+    startMsgSendTime = time.time()
     for i in range(number):
         if msg == "":
             print("Getting message is none!")
             break
         sendTimeStamp = time.time()
         s.sendto(bytes.fromhex(msg), ADDRESS)
+        if args.force:
+            continue
         try:
             recv, addr = s.recvfrom(1024)
             delay = round((time.time() - sendTimeStamp) * 1000, 3)
@@ -178,6 +183,9 @@ def run():
                 print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
         except socket.timeout:
             print("Can't receive msg! Socket timeout")
+    if args.force:
+        delay = round((time.time() - startMsgSendTime) * 1000, 3)
+        print("send " + str(number) + " packets successful, total use: " + str(delay) + "ms")
     s.close()
 
 
