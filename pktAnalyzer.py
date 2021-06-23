@@ -7,7 +7,77 @@ Used to Analyze pcap files.
 from queue import Queue
 
 import yaml
+from pyecharts import options as opts
+from pyecharts.charts import Line
+from pyecharts.globals import ThemeType
 from scapy.all import *
+
+
+def drawPicture(delay_l: list, timeout: float):
+    """
+    draw a picture use packet delay list and timeout.
+    :param delay_l: 单位：ms
+    :param timeout: 单位：ms
+    """
+    unit = 1000  # use unit ms or us in the line chart
+    if max(delay_l) > 10:
+        unit = 1
+    gap = int(len(delay_l) / 20)
+    x = [i for i in range(int(len(delay_l) / gap))]
+    y = [delay * unit for delay in delay_l[::gap]]
+    y_max_idx = y.index(max(y))
+    y_min_idx = y.index(min(y))
+    c = (
+        Line(init_opts=opts.InitOpts(width="1280px", height="720px", theme=ThemeType.WHITE,
+                                     page_title="ResolveDelayView",
+                                     chart_id="masterlovsky_line_01"))
+            .add_xaxis(x)
+            .add_yaxis("delay", y, symbol_size=10,
+                       linestyle_opts=opts.LineStyleOpts(width=2),
+                       itemstyle_opts=opts.ItemStyleOpts(border_width=2),
+                       markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(y=timeout * unit)]),
+                       markpoint_opts=opts.MarkPointOpts(
+                           data=[
+                               opts.MarkPointItem(name="MAX", type_="max", symbol_size=70,
+                                                  coord=[x[y_max_idx], y[y_max_idx]], value=y[y_max_idx]),
+                               opts.MarkPointItem(name="MIN", type_="min", symbol_size=70,
+                                                  coord=[x[y_min_idx], y[y_min_idx]], value=y[y_min_idx])
+                           ]
+                       )
+                       )
+            .set_global_opts(title_opts=opts.TitleOpts(title="DelayMeasure Line-Chart"),
+                             xaxis_opts=opts.AxisOpts(type_="category",
+                                                      name="packetIndex", name_gap=36, name_location="middle",
+                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                             font_weight="bold"),
+                                                      boundary_gap=False,
+                                                      axislabel_opts=opts.LabelOpts(margin=16, color="black"),
+                                                      axistick_opts=opts.AxisTickOpts(
+                                                          is_show=True, length=8,
+                                                          linestyle_opts=opts.LineStyleOpts(color="grey"),
+                                                      ),
+                                                      splitline_opts=opts.SplitLineOpts(
+                                                          is_show=True,
+                                                          linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
+                                                      )),
+                             yaxis_opts=opts.AxisOpts(name="Delay" + "(us)" if unit == 1000 else "(ms)", name_gap=45,
+                                                      name_location="middle",
+                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                             font_weight="bold"),
+                                                      boundary_gap=False,
+                                                      axislabel_opts=opts.LabelOpts(margin=16, color="black"),
+                                                      axistick_opts=opts.AxisTickOpts(
+                                                          is_show=True, length=8,
+                                                          linestyle_opts=opts.LineStyleOpts(color="grey"),
+                                                      ),
+                                                      splitline_opts=opts.SplitLineOpts(
+                                                          is_show=True,
+                                                          linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
+                                                      ))
+                             )
+            .render("line_delay.html")
+    )
+    print("render html done!")
 
 
 def readConf2Yml(path: str):
@@ -43,12 +113,12 @@ def getRequestID(payload: str):
     if payload[:2] == "71" or payload[:2] == "72":
         return payload[8:16]
     elif payload[:2] in ("6f", "70", "73", "74"):
-        return payload[4:12]
+        return payload[2:10]
     else:
         return None
 
 
-def analyzeDelay(delay_list: list, time_out: int):
+def analyzeDelay(delay_list: list, time_out: float):
     n = len(delay_list)
     max_delay = max(delay_list)
     min_delay = min(delay_list)
@@ -59,7 +129,7 @@ def analyzeDelay(delay_list: list, time_out: int):
         if dl > time_out:
             timeout_n += 1
     average_delay = total / n
-    print("packet-pair number: {}, min_delay: {}ms, max_delay: {}ms, average_delay: {}ms, timeout_n: {}"
+    print("packet-pair number: {}, min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
           .format(n, min_delay, max_delay, average_delay, timeout_n))
     return average_delay
 
@@ -73,21 +143,23 @@ def run():
     for pkt in packets:
         pkt_type = getPacketTypeFromPacket(pkt)
         requestID = getRequestIDFromPacket(pkt)
-        # 如果是请求报文，将requestID和对应的时间戳加入字典中
+        # If it is a request packet, put requestID and corresponding timestamp into the dictionary
         if pkt_type in ("6f", "71", "73"):
             if requestID is not None:
                 pkt_pair_time_dict[requestID].put(pkt.time)
-        # 如果是响应报文，将对应的requestID和时间戳取出计算时延
+        # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
         if pkt_type in ("70", "72", "74"):
             if requestID is not None:
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
                 pkt_pair_time_dict.pop(requestID)
     analyzeDelay(delay_l, timeout)
+    return delay_l, timeout
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("use this script: python3 pktAnalyzer.py <test.pcap>")
         exit(0)
-    run()
+    _delay_list, _time_out = run()
+    drawPicture(_delay_list, _time_out)

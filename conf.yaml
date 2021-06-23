@@ -1,4 +1,4 @@
-TIME_OUT: 10
+TIME_OUT: 1
 ENS_HOME: "/home/resolution/ens/"
 SIMULATION_HOME: "/root/xw/nmrsim-v2.1_v6/nmrsim/nmr/network/"
 SIMULATION_DEFAULT_DELAY: ["20", "10", "0"]
