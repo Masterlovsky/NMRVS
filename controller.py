@@ -13,8 +13,6 @@ import paramiko
 import yaml
 
 
-
-
 class Remote(object):
 
     def __init__(self, host, name, password, port=22):

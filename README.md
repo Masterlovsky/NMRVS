@@ -19,7 +19,9 @@ $ pip3 install -r requirement.txt
 ### 1. controller.py
 
 ```shell
-# For example, 
+# start the script:
+$ python3 controller.py
+
 # start some nodes you can tap in : 
 start Node_1 Node_2 / start 1 2 / start 1-4
 
@@ -39,6 +41,9 @@ exit
 ### 2. delay_gen.py
 
 ```shell
+# start the script:
+$ python3 delay_gen.py
+
 # For example, create delay of two nodes you can tap in : 
 Node_1 Node_2 <delay> or 1 2 <delay>
 
@@ -56,7 +61,7 @@ s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>
 
 # 执行topoCollector进行拓扑收集：
 
-python3 topoCollector.py
+$ python3 topoCollector.py
 ```
 
 ### 4. topoShow.py
@@ -66,7 +71,7 @@ python3 topoCollector.py
 
 # 执行以下命令：
 
-python3 topoShow.py
+$ python3 topoShow.py
 
 # 将生成的html文件打开即可
 ```
@@ -78,7 +83,7 @@ python3 topoShow.py
 
 # 执行以下命令：
 
-python3 client.py -i <IP> -p <port> -c <command> -n <number>
+$ python3 client.py -i <IP> -p <port> -c <command> -n <number>
 ``` 
 - 参数设定：
   
@@ -113,3 +118,13 @@ python3 client.py -i <IP> -p <port> -c <command> -n <number>
     **`-ed`** : 发送自定义EID注销报文(非必须参数) ，使用：`-ed + < EID + NA > `
   
     **`-ebd`** : 发送自定义批量注销报文(非必须参数) ，使用：`-ebd + < NA > `
+  
+
+### 6. pktAnalyzer.py
+```shell
+# 用于分析抓包pcap文件，查看解析的数据包时延信息和超时个数等信息
+
+# 执行以下命令：
+
+$ python3 pktAnalyzer.py test.pcap
+``` 
