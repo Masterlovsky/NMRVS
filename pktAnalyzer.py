@@ -13,16 +13,16 @@ from pyecharts.globals import ThemeType
 from scapy.all import *
 
 
-def drawPicture(delay_l: list, timeout: float):
+def drawPicture(delay_l: list, time_out: float):
     """
     draw a picture use packet delay list and timeout.
     :param delay_l: 单位：ms
-    :param timeout: 单位：ms
+    :param time_out: 单位：ms
     """
     unit = 1000  # use unit ms or us in the line chart
     if max(delay_l) > 10:
         unit = 1
-    gap = int(len(delay_l) / 20)
+    gap = int(len(delay_l) / xtick_num)
     x = [i for i in range(int(len(delay_l) / gap))]
     y = [delay * unit for delay in delay_l[::gap]]
     y_max_idx = y.index(max(y))
@@ -35,7 +35,7 @@ def drawPicture(delay_l: list, timeout: float):
             .add_yaxis("delay", y, symbol_size=10,
                        linestyle_opts=opts.LineStyleOpts(width=2),
                        itemstyle_opts=opts.ItemStyleOpts(border_width=2),
-                       markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(y=timeout * unit)]),
+                       markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(y=time_out * unit)]),
                        markpoint_opts=opts.MarkPointOpts(
                            data=[
                                opts.MarkPointItem(name="MAX", type_="max", symbol_size=70,
@@ -135,8 +135,6 @@ def analyzeDelay(delay_list: list, time_out: float):
 
 
 def run():
-    yml = readConf2Yml("conf.yaml")
-    timeout = yml["TIME_OUT"]
     packets = rdpcap(sys.argv[1])
     pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
     delay_l = []  # store each delay value of packet-pair
@@ -160,5 +158,8 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("use this script: python3 pktAnalyzer.py <test.pcap>")
         exit(0)
+    yml = readConf2Yml("conf.yaml")
+    timeout = yml["TIME_OUT"]
+    xtick_num = yml["DRAW"]["XTICK_NUM"]
     _delay_list, _time_out = run()
     drawPicture(_delay_list, _time_out)
