@@ -152,7 +152,6 @@ def run():
             if requestID is not None:
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
-                pkt_pair_time_dict.pop(requestID)
     analyzeDelay(delay_l, timeout)
     return delay_l, timeout
 
