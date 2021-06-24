@@ -23,6 +23,7 @@ def drawPicture(delay_l: list, time_out: float):
     if max(delay_l) > 10:
         unit = 1
     gap = int(len(delay_l) / xtick_num)
+    gap = 1 if gap == 0 else gap  # choose interval gap between x ticks, default is 1
     x = [i for i in range(int(len(delay_l) / gap))]
     y = [delay * unit for delay in delay_l[::gap]]
     y_max_idx = y.index(max(y))
