@@ -3,6 +3,7 @@
 By mzl 2021.06.09 version 1.0
 Used to send message to NMR nodes
 """
+import random
 import socket
 import argparse
 import time
@@ -33,8 +34,10 @@ def getparser():
                              "'custom': user defined payload message, use with parameter -m <msg>; ")
     parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
                         help="resolve self defined EID, use: -eq <EID>")
-    parser.add_argument('--EIDRegister', '-er', required=False, type=str,
-                        help="register self defined EID+NA,  use: -er <EID+NA>")
+    parser.add_argument('--TagQuery', '-tq', required=False, type=str,
+                        help="resolve self defined Tag, use: -tq <tlv>")
+    parser.add_argument('--EIDRegister', '-er', required=False, type=str, nargs='+',
+                        help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
     parser.add_argument('--EIDDeregister', '-ed', required=False, type=str,
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
     parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
@@ -61,6 +64,13 @@ def checkIP(ip: str):
         raise Exception("ip input wrong")
 
 
+def getRequestID():
+    """
+    :return: return random requestID(4 byte hex string)
+    """
+    return hex(random.randint(268435456, 4294967295))[2:]
+
+
 def getMsg(command: str, content: str = ""):
     """
     从输入指令判断对应的注册、注销、解析、RNL获取等报文
@@ -71,40 +81,50 @@ def getMsg(command: str, content: str = ""):
     """
     position = 0  # 标记返回报文成功的标志位的起始位置
     timeStamp = getTimeStamp()
+    requestID = getRequestID()
     if command == "register" or command == "r":
         position = 10
-        msg = "6f34653039bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-              "030100" + timeStamp + "0006010101020102"
+        msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
+                                 "030100" + timeStamp + "0006010101020102"
     elif command == "deregister" or command == "d":
         position = 10
-        msg = "733465303900bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "resolve" or command == "e" or command == "eid":
         position = 2
-        msg = "7100000663653962bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp + "010101020102"
+        msg = "71000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
     elif command == "resolve+tlv" or command == "tlv":
         position = 2
-        msg = "71000006123412340000000000000000000000000000000000000000" + timeStamp + "010101020102"
+        msg = "71000006" + requestID + "0000000000000000000000000000000000000000" + timeStamp + "010101020102"
     elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
         position = 10
-        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        msg = "73" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "EIDQuery" or command == "eq":
         position = 2
-        msg = "7100000663653962" + content + timeStamp + "010101020102"
+        msg = "71000000" + requestID + content + timeStamp
+    elif command == "TagQuery" or command == "tq":
+        tlv_len = hex(int(len(content) / 2))[2:]
+        tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
+        position = 2
+        msg = "7100" + tlv_len_str + requestID + "0" * 40 + timeStamp + content
     elif command == "EIDRegister" or command == "er":
+        eid_na = content[:72]
+        tlv = content[72:]
+        tlv_len = hex(int(len(tlv) / 2))[2:]
+        tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
         position = 10
-        msg = "6f34653039" + content + "030100" + timeStamp + "0006010101020102"
+        msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
     elif command == "EIDDeregister" or command == "ed":
         position = 10
-        msg = "733465303900" + content + timeStamp
+        msg = "73" + requestID + "00" + content + timeStamp
     elif command == "EIDBatchDeregister" or command == "ebd":
         position = 10
-        msg = "733465303901bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + content + timeStamp
+        msg = "73" + requestID + "01bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + content + timeStamp
     elif command == "rnl":
         position = 10
-        msg = "0d88888888" + timeStamp
+        msg = "0d" + requestID + timeStamp
     elif command == "connect" or command == "agent":
         position = 10
-        msg = "1d88888888" + timeStamp
+        msg = "1d" + requestID + timeStamp
     elif command == "dm" or command == "delay-measure":
         msg = "03" + timeStamp
         position = 9999  # 选一个比较大的数当做标识
@@ -130,12 +150,20 @@ def run():
             print("EID length error!")
             return
         msg, p = getMsg("EIDQuery", EID)
+    elif args.TagQuery is not None:
+        tlv_msg = args.TagQuery
+        msg, p = getMsg("TagQuery", tlv_msg)
     elif args.EIDRegister is not None:
-        EIDNA = args.EIDRegister
+        if len(args.EIDRegister) > 1:
+            EIDNA = args.EIDRegister[0]
+            tag = args.EIDRegister[1]
+        else:
+            EIDNA = args.EIDRegister[0]
+            tag = ""
         if len(EIDNA) != 72:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("EIDRegister", EIDNA)
+        msg, p = getMsg("EIDRegister", EIDNA + tag)
     elif args.EIDDeregister is not None:
         EIDNA = args.EIDDeregister
         if len(EIDNA) != 72:
