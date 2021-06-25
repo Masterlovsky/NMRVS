@@ -111,9 +111,11 @@ $ python3 client.py -i <IP> -p <port> -c <command> -n <number>
   
     **`--force`** : 强制发送报文，不等待接收返回报文，一般配合 `-n` 使用，pps可达**80000**左右 
   
-    **`-er`** : 发送自定义EID注册报文(非必须参数) ，使用：`-er + < EID + NA >` 
+    **`-er`** : 发送自定义EID注册报文(非必须参数)，tlv为可选项，使用：`-er + < EID + NA > + < tlv >` 
   
     **`-eq`** : 发送自定义EID解析报文(非必须参数) ，使用：`-eq + < EID > `
+  
+    **`-tq`** : 发送自定义Tag解析报文(非必须参数) ，使用：`-tq + < tlv > `
   
     **`-ed`** : 发送自定义EID注销报文(非必须参数) ，使用：`-ed + < EID + NA > `
   
@@ -128,3 +130,5 @@ $ python3 client.py -i <IP> -p <port> -c <command> -n <number>
 
 $ python3 pktAnalyzer.py test.pcap
 ``` 
+- 其中时延趋势参考图可在生成的`len_delay.html`中查看
+横坐标标记数量可在`conf.yml`配置文件中进行修改
