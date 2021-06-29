@@ -159,7 +159,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 2:
         print("use this script: python3 pktAnalyzer.py <test.pcap>")
         exit(0)
-    yml = readConf2Yml("conf.yaml")
+    yml = readConf2Yml("conf.yml")
     timeout = yml["TIME_OUT"]
     xtick_num = yml["DRAW"]["XTICK_NUM"]
     _delay_list, _time_out = run()

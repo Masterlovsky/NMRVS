@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 """
 By mzl 2021.03.10 version 1.0
-Used to start Node
+Used to configure the node between the time delay, support for dynamic modification
 """
 import re
 import socket
@@ -397,7 +397,7 @@ def run():
 
 
 if __name__ == '__main__':
-    conf = readConf2Yml("conf.yaml")
+    conf = readConf2Yml("conf.yml")
     ENS_HOME = conf["ENS_HOME"]
     SIMULATION_HOME = conf["SIMULATION_HOME"]
     SIMULATION_DEFAULT_DELAY = conf["SIMULATION_DEFAULT_DELAY"]

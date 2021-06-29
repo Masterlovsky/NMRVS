@@ -388,7 +388,7 @@ def handleSimulation(msg: str):
 
 
 if __name__ == '__main__':
-    conf = readConf2Yml("conf.yaml")
+    conf = readConf2Yml("conf.yml")
     ENS_HOME = conf["ENS_HOME"]
     SIMULATION_IP = conf["SIMULATION_IP"]
     SIMULATION_PORT = conf["SIMULATION_PORT"]

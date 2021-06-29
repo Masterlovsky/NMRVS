@@ -3,9 +3,9 @@
 By mzl 2021.06.09 version 1.0
 Used to send message to NMR nodes
 """
+import argparse
 import random
 import socket
-import argparse
 import time
 
 
@@ -42,7 +42,9 @@ def getparser():
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
     parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
-    parser.add_argument('--number', '-n', required=False, default=1, type=int, help="Number of packets to send.")
+    parser.add_argument('--number', '-n', required=False, default=1, type=int,
+                        help="Number of packets to send. set n = -1 if number is infinite")
+    # parser.add_argument('--speed', '-s', required=False, default=-1, type=int, help="packets sending speed(pps).")
     parser.add_argument('--force', required=False, action="store_true", default=False,
                         help="force send message without waiting response, use to increase PPS")
     parser.add_argument('--message', '-m', required=False, type=str,
@@ -142,8 +144,7 @@ def run():
     ADDRESS = (IP, port)
     family = checkIP(IP)  # check IPv4/IPv6
     command = args.command
-    msg = ""
-    p = 0
+    infFlag = False
     if args.EIDQuery is not None:
         EID = args.EIDQuery
         if len(EID) != 40:
@@ -186,31 +187,55 @@ def run():
             p = 0
         else:
             msg, p = getMsg(command)
+    if msg == "":
+        print("Getting message is none!")
+        return
     number = args.number
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
+    if number < 0:
+        infFlag = True
     startMsgSendTime = time.time()
-    for i in range(number):
-        if msg == "":
-            print("Getting message is none!")
-            break
-        sendTimeStamp = time.time()
-        s.sendto(bytes.fromhex(msg), ADDRESS)
-        if args.force:
-            continue
-        try:
-            recv, addr = s.recvfrom(1024)
-            delay = round((time.time() - sendTimeStamp) * 1000, 3)
-            if p != 0 and p != 9999:
-                isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
-            else:
-                isSuccess = "success"
-            if p == 9999:
-                print("receive delay measure response msg, status: " + isSuccess + ", delay: " + str(delay) + "ms")
-            else:
-                print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
-        except socket.timeout:
-            print("Can't receive msg! Socket timeout")
+    while not infFlag:
+        for i in range(number):
+            sendTimeStamp = time.time()
+            s.sendto(bytes.fromhex(msg), ADDRESS)
+            if args.force:
+                continue
+            try:
+                recv, addr = s.recvfrom(1024)
+                delay = round((time.time() - sendTimeStamp) * 1000, 3)
+                if p != 0 and p != 9999:
+                    isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+                else:
+                    isSuccess = "success"
+                if p == 9999:
+                    print("receive delay measure response msg, status: " + isSuccess + ", delay: " + str(delay) + "ms")
+                else:
+                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+            except socket.timeout:
+                print("Can't receive msg! Socket timeout")
+        break
+    else:
+        count = 0
+        while True:
+            s.sendto(bytes.fromhex(msg), ADDRESS)
+            if args.force:
+                count += 1
+                if count % 100000 == 0:
+                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    pps = int(count / delay * 1000)
+                    print("Already send " + str(count) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                continue
+            try:
+                recv, addr = s.recvfrom(1024)
+                if p != 0 and p != 9999:
+                    isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+                else:
+                    print("receive delay measure response msg, status: success")
+            except socket.timeout:
+                print("Can't receive msg! Socket timeout")
     if args.force:
         delay = round((time.time() - startMsgSendTime) * 1000, 3)
         print("send " + str(number) + " packets successful, total use: " + str(delay) + "ms")

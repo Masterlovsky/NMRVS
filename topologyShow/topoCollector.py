@@ -1,13 +1,12 @@
 #! /usr/bin/python3
 """
 By mzl 2021.04.8 version 1.0
-Used to show Topology of Nodes
+Used to collect Topology of Nodes
 """
-import threading
-import time
 import socket
-import yaml
+
 import pymysql
+import yaml
 
 MSG_PARENT = "0a"
 MSG_PARENT_REMOVE = "0b"
