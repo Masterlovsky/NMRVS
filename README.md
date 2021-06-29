@@ -50,7 +50,10 @@ Node_1 Node_2 <delay> or 1 2 <delay>
 # Create delay of Simulation nodes, you can tap in:
 s <Node_ID> <Node_level> <delay_l1> <delay_l2> <delay_l3>
 
-# letter 's' can be replaced by 'S' or "simulation", Node_ID can be replaced by just ID(number)
+# Create p2p delay of Simulation nodes, you can tap in:
+s s <ID1-ID2> <delay>
+
+# The first letter 's' can be replaced by 'S' or "simulation", Node_ID can be replaced by just ID(number)
 # delay_l1~delay_l3 is the common delay of level1~3 nodes, these three parameter can be omitted, default is [100,50,10].
 ```
 
@@ -107,7 +110,7 @@ $ python3 client.py -i <IP> -p <port> -c <command> -n <number>
   
     **`-m`** : 输入自定义的完整报文payload (非必须参数) 
   
-    **`-n`** : 发送的报文数目，默认为**1** (非必须参数) 
+    **`-n`** : 发送的报文数目，默认为**1** (非必须参数)，**当`n < 0`时设置为持续发包**，需要强制退出程序才能结束。
   
     **`--force`** : 强制发送报文，不等待接收返回报文，一般配合 `-n` 使用，pps可达**80000**左右 
   
