@@ -345,14 +345,29 @@ def sendSimulationUpdateMsg():
         print(e)
 
 
+def handleP2PSimDelay(p2p_msg_l: list, path: str):
+    """
+    :param p2p_msg_l: [s, <ID-ID>, <DELAY>]
+    :param path: /axx/xxx.txt
+    """
+    line = " ".join(p2p_msg_l) + "\n"
+    output = path + "simulation_delay.txt"
+    with open(output, 'a') as f:
+        f.write(line)
+
+
 def handleSimulationNode(msg: str, delay_path: str):
     """
     处理仿真节点的时延请求
     生成文件格式为：
     <ID> <LEVEL> <DELAY1> <DELAY2> <DELAY3>
+    s <ID-ID> <DELAY>
     """
     delay_1, delay_2, delay_3 = SIMULATION_DEFAULT_DELAY
     origin_msg_l = msg.strip().split(" ")
+    if origin_msg_l[1] == 's':
+        handleP2PSimDelay(origin_msg_l[1:], delay_path)
+        return
     node_ID = origin_msg_l[1]
     level = origin_msg_l[2]
     output = delay_path + "simulation_delay.txt"
