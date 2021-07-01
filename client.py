@@ -38,6 +38,9 @@ def getparser():
                         help="resolve self defined Tag, use: -tq <tlv>")
     parser.add_argument('--EIDRegister', '-er', required=False, type=str, nargs='+',
                         help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
+    parser.add_argument('--sequence', required=False, action="store_true", default=False,
+                        help="register sequence EID from 0 to set number + NA"
+                             "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--EIDDeregister', '-ed', required=False, type=str,
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
     parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
@@ -67,11 +70,48 @@ def checkIP(ip: str):
         raise Exception("ip input wrong")
 
 
-def getRequestID():
+def getRequestID() -> str:
     """
     :return: return random requestID(4 byte hex string)
     """
     return hex(random.randint(268435456, 4294967295))[2:]
+
+
+def getRandomEID() -> str:
+    """
+    :return: return random EID(20 byte hex string, length = 40)
+    """
+    s = ""
+    for i in range(40):
+        num_hex = hex(random.randint(0, 15))
+        s = s + num_hex[2:]
+    return s
+
+
+def getSequenceEID(end: int = 1):
+    """
+    :return: return random EID(20 byte hex string, length = 40)
+    """
+    if end == 1:
+        return ["b" * 40]
+    eid_list = []
+    for i in range(end):
+        s = "b" * (40 - len(str(i))) + str(i)
+        eid_list.append(s)
+    return eid_list
+
+
+def getSequenceMsg(num: int):
+    NA = "99999999999999999999999999999999"
+    position = 10  # 标记返回报文成功的标志位的起始位置
+    timeStamp = getTimeStamp()
+    requestID = getRequestID()
+    msg = []
+    if num >= 0:
+        eid_list = getSequenceEID(num)
+        for i in range(num):
+            msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
+    return msg, position
 
 
 def getMsg(command: str, content: str = ""):
@@ -179,7 +219,9 @@ def run():
             return
         msg, p = getMsg("EIDBatchDeregister", NA)
     else:
-        if command == "custom":
+        if (command == 'register' or command == 'r') and args.sequence:
+            msg, p = getSequenceMsg(args.number)
+        elif command == "custom":
             msg = args.message
             if msg is None:
                 print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID> "
@@ -199,9 +241,13 @@ def run():
         infFlag = True
     startMsgSendTime = time.time()
     while not infFlag:
+        # 发送一批数据包
         for i in range(number):
             sendTimeStamp = time.time()
-            s.sendto(bytes.fromhex(msg), ADDRESS)
+            if type(msg) == str:
+                s.sendto(bytes.fromhex(msg), ADDRESS)
+            else:
+                s.sendto(bytes.fromhex(msg[i]), ADDRESS)
             if args.force:
                 continue
             try:
@@ -219,6 +265,10 @@ def run():
                 print("Can't receive msg! Socket timeout")
         break
     else:
+        # 循环不间断发送数据包
+        if type(msg) != str:
+            print("Error! register sequence EID only supported in limited packet numbers.")
+            return
         count = 0
         lastCheckTime = startMsgSendTime
         while True:
