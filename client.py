@@ -44,7 +44,8 @@ def getparser():
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('--number', '-n', required=False, default=1, type=int,
                         help="Number of packets to send. set n = -1 if number is infinite")
-    # parser.add_argument('--speed', '-s', required=False, default=-1, type=int, help="packets sending speed(pps).")
+    parser.add_argument('--speed', '-s', required=False, default=-1, type=int,
+                        help="packets sending speed(pps). Only when there are --force parameters in effect")
     parser.add_argument('--force', required=False, action="store_true", default=False,
                         help="force send message without waiting response, use to increase PPS")
     parser.add_argument('--message', '-m', required=False, type=str,
@@ -191,6 +192,7 @@ def run():
         print("Getting message is none!")
         return
     number = args.number
+    speed = args.speed
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
     if number < 0:
@@ -218,11 +220,16 @@ def run():
         break
     else:
         count = 0
+        lastCheckTime = startMsgSendTime
         while True:
             s.sendto(bytes.fromhex(msg), ADDRESS)
+            count += 1
             if args.force:
-                count += 1
-                if count % 100000 == 0:
+                if speed > 0 and count % 5000 == 0:
+                    sleepTime = 5000 / speed - (time.time() - lastCheckTime)
+                    time.sleep(sleepTime if sleepTime > 0 else 0)
+                    lastCheckTime = time.time()
+                if count % 50000 == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(count / delay * 1000)
                     print("Already send " + str(count) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
@@ -238,7 +245,8 @@ def run():
                 print("Can't receive msg! Socket timeout")
     if args.force:
         delay = round((time.time() - startMsgSendTime) * 1000, 3)
-        print("send " + str(number) + " packets successful, total use: " + str(delay) + "ms")
+        print("send " + str(number) + " packets successful, total use: " + str(delay) + "ms, pps: " +
+              str(int(number / delay * 1000)))
     s.close()
 
 
