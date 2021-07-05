@@ -242,6 +242,7 @@ def run():
     startMsgSendTime = time.time()
     while not infFlag:
         # 发送一批数据包
+        lastCheckTime = startMsgSendTime
         for i in range(number):
             sendTimeStamp = time.time()
             if type(msg) == str:
@@ -249,6 +250,14 @@ def run():
             else:
                 s.sendto(bytes.fromhex(msg[i]), ADDRESS)
             if args.force:
+                if speed > 0 and number >= 10000 and i % (number // 20) == 0:
+                    sleepTime = (number // 20) / speed - (time.time() - lastCheckTime)
+                    time.sleep(sleepTime if sleepTime > 0 else 0)
+                    lastCheckTime = time.time()
+                if i % (number // 5) == 0:
+                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    pps = int(i / delay * 1000)
+                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
                 continue
             try:
                 recv, addr = s.recvfrom(1024)
