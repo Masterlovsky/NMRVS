@@ -19,13 +19,15 @@ def drawPicture(delay_l: list, time_out: float):
     :param delay_l: 单位：ms
     :param time_out: 单位：ms
     """
-    unit = 1000  # use unit ms or us in the line chart
+    unit = 1000  # use unit ms or us in the line chart (1000：us; 1: ms)
     if max(delay_l) > 10:
         unit = 1
     gap = int(len(delay_l) / xtick_num)
     gap = 1 if gap == 0 else gap  # choose interval gap between x ticks, default is 1
-    x = [i for i in range(int(len(delay_l) / gap))]
+    x = [i for i in range(xtick_num)]
     y = [delay * unit for delay in delay_l[::gap]]
+    if len(x) != len(y):
+        y = y[:-1]  # 处理除不开的情况，删去最后一个y的值
     y_max_idx = y.index(max(y))
     y_min_idx = y.index(min(y))
     c = (
@@ -61,7 +63,7 @@ def drawPicture(delay_l: list, time_out: float):
                                                           is_show=True,
                                                           linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
                                                       )),
-                             yaxis_opts=opts.AxisOpts(name="Delay" + "(us)" if unit == 1000 else "(ms)", name_gap=45,
+                             yaxis_opts=opts.AxisOpts(name="Delay" + ("(us)" if unit == 1000 else "(ms)"), name_gap=45,
                                                       name_location="middle",
                                                       name_textstyle_opts=opts.TextStyleOpts(font_size=14,
                                                                                              font_weight="bold"),
@@ -111,9 +113,9 @@ def getRequestIDFromPacket(pkt_item):
 
 
 def getRequestID(payload: str):
-    if payload[:2] == "71" or payload[:2] == "72":
+    if payload[:2] in ("71", "72", "0d", "0e"):
         return payload[8:16]
-    elif payload[:2] in ("6f", "70", "73", "74"):
+    elif payload[:2] in ("6f", "70", "73", "74", "0b", "0c", "0f", "10"):
         return payload[2:10]
     else:
         return None
@@ -143,11 +145,11 @@ def run():
         pkt_type = getPacketTypeFromPacket(pkt)
         requestID = getRequestIDFromPacket(pkt)
         # If it is a request packet, put requestID and corresponding timestamp into the dictionary
-        if pkt_type in ("6f", "71", "73"):
+        if pkt_type in ("6f", "71", "73", "0d", "0b", "0f"):
             if requestID is not None:
                 pkt_pair_time_dict[requestID].put(pkt.time)
         # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
-        if pkt_type in ("70", "72", "74"):
+        if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
             if requestID is not None:
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
