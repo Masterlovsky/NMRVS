@@ -182,7 +182,8 @@ def welCome(node_na_csv="Node_NA.csv"):
     print("=" * 80)
     print("Input some delay messages if you want to create delay file.\n"
           "For example, create delay of two nodes you can tap in : Node_1 Node_2 <delay> or 1 2 <delay>\n"
-          "Create delay of Simulation nodes, input: s <Node_1>-<Node_2> <Node_level> <delay_l1> <delay_l2> <delay_l3>")
+          "Create level delay of Simulation node, input: s <Node_1> <Node_level> <delay_l1> <delay_l2> <delay_l3>"
+          "Create delay of 2 Simulation nodes, input: s <Node_1>-<Node_2> <delay>")
     print("If you have created all the delay message, press the 'enter' button to stop the input process")
     print("=" * 80)
     print("All possible nodes are list as follows: " + getAllNodes(node_na_csv))
