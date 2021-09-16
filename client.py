@@ -53,6 +53,8 @@ def getparser():
                         help="force send message without waiting response, use to increase PPS")
     parser.add_argument('--message', '-m', required=False, type=str,
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
+    parser.add_argument('--detail', '-d', required=False, action="store_true", default=False,
+                        help="analyze response message and show detail. (Only has effect in normal mode)")
     return parser
 
 
@@ -177,6 +179,42 @@ def getMsg(command: str, content: str = ""):
     return msg, position
 
 
+def show_details(receive_message: str):
+    # 注册响应报文
+    if receive_message[:2] == "70":
+        request_id = receive_message[2:10]
+        status_dict = {"01": "registered_successful", "02": "parameter_error", "03": "internal_error",
+                       "04": "storage_is_full", "05": "other_errors"}
+        status = status_dict[receive_message[10:12]]
+        time_stamp = receive_message[12:20]
+        print("=== response details ===:\nrequest_id: {}, register status: {}, timestamp: {}".format(request_id, status,
+                                                                                                     time_stamp))
+    # 注销响应报文
+    if receive_message[:2] == "74":
+        request_id = receive_message[2:10]
+        status_dict = {"01": "delete_successful", "02": "parameter_error", "03": "internal_error",
+                       "04": "storage_is_full", "05": "other_errors"}
+        status = status_dict[receive_message[10:12]]
+        time_stamp = receive_message[12:20]
+        print("=== response details ===:\nrequest_id: {}, register status: {}, timestamp: {}".format(request_id, status,
+                                                                                                     time_stamp))
+    # 解析响应报文
+    elif receive_message[:2] == "72":
+        status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
+        status = status_dict[receive_message[2:4]]
+        request_id = receive_message[8:16]
+        time_stamp = receive_message[16:24]
+        num = receive_message[24:28]
+        index = 28
+        print("=== response details ===:\nrequest_id: {}, resolve status: {}, timestamp: {}".format(request_id, status,
+                                                                                                    time_stamp))
+        print("resolving_entry_number: {}".format(num))
+        for i in range(int(num)):
+            print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + 40],
+                                                receive_message[index + 40:index + 72]))
+            index += 72
+
+
 def run():
     parser = getparser()
     args = parser.parse_args()
@@ -219,6 +257,7 @@ def run():
             return
         msg, p = getMsg("EIDBatchDeregister", NA)
     else:
+        # batch register only for eid like: bbb...bb19210
         if (command == 'register' or command == 'r') and args.sequence:
             msg, p = getSequenceMsg(args.number)
         elif command == "custom":
@@ -270,6 +309,8 @@ def run():
                     print("receive delay measure response msg, status: " + isSuccess + ", delay: " + str(delay) + "ms")
                 else:
                     print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+                    if args.detail:
+                        show_details(recv.hex())
             except socket.timeout:
                 print("Can't receive msg! Socket timeout")
         break
