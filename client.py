@@ -229,7 +229,7 @@ def show_details(receive_message: str):
         level_delay_list = []
         p = 78
         for i in range(delay_level_number):
-            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4]), 16))
+            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4], 16)))
             p += 4
         # 解析节点
         resolve_node_number = int(receive_message[p:p + 2])
@@ -302,7 +302,7 @@ def show_details(receive_message: str):
         level_delay_list = []
         p = 14
         for i in range(delay_level_number):
-            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4]), 16))
+            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4], 16)))
             p += 4
         # 解析节点
         resolve_node_number = int(receive_message[p:p + 2])
