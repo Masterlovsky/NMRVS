@@ -276,19 +276,19 @@ def show_details(receive_message: str):
               "\t[log_collection_system_address]: " + log_collection_system_addr)
         for ld in level_delay_list:
             print("level: {} - delay: {}ms".format(ld[0], ld[1]), sep="\t")
-        print("--- resolve nodes ---\n")
+        print("--- resolve nodes ---")
         for i, node in enumerate(resolve_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
-        print("--- child nodes ---\n")
+        print("--- child nodes ---")
         for i, node in enumerate(child_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
-        print("--- delay neighbor nodes ---\n")
+        print("--- delay neighbor nodes ---")
         for i, node in enumerate(delay_neighbor_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
-        print("--- geo neighbor nodes ---\n")
+        print("--- geo neighbor nodes ---")
         for i, node in enumerate(geo_neighbor_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
-        print("--- index neighbor nodes ---\n")
+        print("--- index neighbor nodes ---")
         for i, node in enumerate(index_neighbor_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
 
@@ -325,10 +325,10 @@ def show_details(receive_message: str):
               .format(request_id, status, time_stamp))
         for ld in level_delay_list:
             print("level: {} - delay: {}ms".format(ld[0], ld[1]), sep="\t")
-        print("--- resolve nodes ---\n")
+        print("--- resolve nodes ---")
         for i, node in enumerate(resolve_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
-        print("--- child nodes ---\n")
+        print("--- child nodes ---")
         for i, node in enumerate(child_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
 
