@@ -187,32 +187,150 @@ def show_details(receive_message: str):
                        "04": "storage_is_full", "05": "other_errors"}
         status = status_dict[receive_message[10:12]]
         time_stamp = receive_message[12:20]
-        print("=== response details ===:\nrequest_id: {}, register status: {}, timestamp: {}".format(request_id, status,
-                                                                                                     time_stamp))
+        print("=== response details ===:\n[request_id]: {}, [register status]: {}, [timestamp]: {}".format(request_id,
+                                                                                                           status,
+                                                                                                           time_stamp))
     # 注销响应报文
-    if receive_message[:2] == "74":
+    elif receive_message[:2] == "74":
         request_id = receive_message[2:10]
         status_dict = {"01": "delete_successful", "02": "parameter_error", "03": "internal_error",
                        "04": "storage_is_full", "05": "other_errors"}
         status = status_dict[receive_message[10:12]]
         time_stamp = receive_message[12:20]
-        print("=== response details ===:\nrequest_id: {}, register status: {}, timestamp: {}".format(request_id, status,
-                                                                                                     time_stamp))
+        print("=== response details ===:\n[request_id]: {}, [register status]: {}, [timestamp]: {}".format(request_id,
+                                                                                                           status,
+                                                                                                           time_stamp))
     # 解析响应报文
     elif receive_message[:2] == "72":
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
         status = status_dict[receive_message[2:4]]
         request_id = receive_message[8:16]
         time_stamp = receive_message[16:24]
-        num = receive_message[24:28]
+        num = int(receive_message[24:28], 16)
         index = 28
-        print("=== response details ===:\nrequest_id: {}, resolve status: {}, timestamp: {}".format(request_id, status,
-                                                                                                    time_stamp))
-        print("resolving_entry_number: {}".format(num))
-        for i in range(int(num)):
+        print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timestamp]: {}".format(request_id,
+                                                                                                          status,
+                                                                                                          time_stamp))
+        print("[resolving_entry_number]: {}".format(num))
+        for i in range(num):
             print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + 40],
                                                 receive_message[index + 40:index + 72]))
             index += 72
+
+    # rnl响应报文 -客户端
+    elif receive_message[:2] == "1e":
+        request_id = receive_message[2:10]
+        status_dict = {"01": "get_rnl_successful", "00": "get_rnl_failed"}
+        status = status_dict[receive_message[10:12]]
+        global_resolution_addr = receive_message[12:44]
+        log_collection_system_addr = receive_message[44:76]
+        # 解析时延等级
+        delay_level_number = int(receive_message[76:78], 16)
+        level_delay_list = []
+        p = 78
+        for i in range(delay_level_number):
+            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4]), 16))
+            p += 4
+        # 解析节点
+        resolve_node_number = int(receive_message[p:p + 2])
+        p += 2
+        resolve_node_list = []
+        for i in range(resolve_node_number):
+            resolve_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                      int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        # 子节点
+        child_node_number = int(receive_message[p:p + 2], 16)
+        p += 2
+        child_node_list = []
+        for i in range(child_node_number):
+            child_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                    int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        # 时延邻居节点
+        delay_neighbor_node_number = int(receive_message[p:p + 2], 16)
+        p += 2
+        delay_neighbor_node_list = []
+        for i in range(delay_neighbor_node_number):
+            delay_neighbor_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                             int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        # 地理邻居节点
+        geo_neighbor_node_number = int(receive_message[p:p + 2], 16)
+        p += 2
+        geo_neighbor_node_list = []
+        for i in range(geo_neighbor_node_number):
+            geo_neighbor_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                           int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        # 索引邻居节点
+        index_neighbor_node_number = int(receive_message[p:p + 2], 16)
+        p += 2
+        index_neighbor_node_list = []
+        for i in range(index_neighbor_node_number):
+            index_neighbor_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                             int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        print("=== response details ===:\n[request_id]: {}, [resolve status]: {}".format(request_id, status))
+        print("[global_resolution_address]: " + global_resolution_addr +
+              "\t[log_collection_system_address]: " + log_collection_system_addr)
+        for ld in level_delay_list:
+            print("level: {} - delay: {}ms".format(ld[0], ld[1]), sep="\t")
+        print("--- resolve nodes ---\n")
+        for i, node in enumerate(resolve_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+        print("--- child nodes ---\n")
+        for i, node in enumerate(child_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+        print("--- delay neighbor nodes ---\n")
+        for i, node in enumerate(delay_neighbor_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+        print("--- geo neighbor nodes ---\n")
+        for i, node in enumerate(geo_neighbor_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+        print("--- index neighbor nodes ---\n")
+        for i, node in enumerate(index_neighbor_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+
+    # rnl响应报文 -接入代理
+    elif receive_message[:2] == "0e":
+        request_id = receive_message[2:10]
+        status_dict = {"01": "get_rnl_successful", "00": "get_rnl_failed"}
+        status = status_dict[receive_message[10:12]]
+        # 解析时延等级
+        delay_level_number = int(receive_message[12:14], 16)
+        level_delay_list = []
+        p = 14
+        for i in range(delay_level_number):
+            level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4]), 16))
+            p += 4
+        # 解析节点
+        resolve_node_number = int(receive_message[p:p + 2])
+        p += 2
+        resolve_node_list = []
+        for i in range(resolve_node_number):
+            resolve_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                      int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        # 子节点
+        child_node_number = int(receive_message[p:p + 2], 16)
+        p += 2
+        child_node_list = []
+        for i in range(child_node_number):
+            child_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
+                                    int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
+            p += 44
+        time_stamp = receive_message[p:p+8]
+        print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timeStamp]: {}"
+              .format(request_id, status, time_stamp))
+        for ld in level_delay_list:
+            print("level: {} - delay: {}ms".format(ld[0], ld[1]), sep="\t")
+        print("--- resolve nodes ---\n")
+        for i, node in enumerate(resolve_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
+        print("--- child nodes ---\n")
+        for i, node in enumerate(child_node_list):
+            print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
 
 
 def run():
