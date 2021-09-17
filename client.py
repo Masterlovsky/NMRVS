@@ -20,18 +20,21 @@ def getparser():
     parser.add_argument('--port', '-p', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', type=str, default="custom",
-                        choices=['register', 'r', 'deregister', 'd', 'batch-deregister', 'bd', 'eid', 'tlv', 'rnl',
-                                 'dm', 'delay-measure', 'agent', 'custom'],
+                        choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl',
+                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge'],
                         help="Input what kind of message to send, "
-                             "'register' = 'r'; "
-                             "'deregister' = 'd'; "
-                             "'batch-deregister' = 'bd'; "
-                             "'eid': EID resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
-                             "'tlv': tlv resolve, use EID: 0000000000000000000000000000000000000000; "
-                             "'rnl': get rnl response from resolve node; "
-                             "'agent': get rnl response from server-agent; "
-                             "'dm': delay measure from client to resolve node; "
-                             "'custom': user defined payload message, use with parameter -m <msg>; ")
+                             "'r' -> register; "
+                             "'d' -> deregister; "
+                             "'bd' -> batch-deregister; "
+                             "'eid' -> eid resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
+                             "'gr' -> batch-deregister; "
+                             "'gd' -> globalDeregister; "
+                             "'ge' -> globalResolve; eid global resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
+                             "'tlv' -> tlv resolve, use EID: 0000000000000000000000000000000000000000; "
+                             "'rnl' -> get rnl response from resolve node; "
+                             "'agent' -> get rnl response from server-agent; "
+                             "'dm' -> delay measure from client to resolve node; "
+                             "'custom' -> user defined payload message, use with parameter -m <msg>; ")
     parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
                         help="resolve self defined EID, use: -eq <EID>")
     parser.add_argument('--TagQuery', '-tq', required=False, type=str,
@@ -103,7 +106,7 @@ def getSequenceEID(end: int = 1):
     return eid_list
 
 
-def getSequenceMsg(num: int):
+def getSequenceMsg(num: int, command: str):
     NA = "99999999999999999999999999999999"
     position = 10  # 标记返回报文成功的标志位的起始位置
     timeStamp = getTimeStamp()
@@ -112,7 +115,12 @@ def getSequenceMsg(num: int):
     if num >= 0:
         eid_list = getSequenceEID(num)
         for i in range(num):
-            msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
+            if command == "r" or command == "register":
+                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
+            elif command == 'gr':
+                msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
+            else:
+                print("Warning! Don't support this kind of sequence msg.")
     return msg, position
 
 
@@ -143,6 +151,16 @@ def getMsg(command: str, content: str = ""):
     elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
         position = 10
         msg = "73" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+    elif command == "globalRegister" or command == "gr":
+        position = 10
+        msg = "0b" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
+                                 "010100" + timeStamp + "0000"
+    elif command == "globalResolve" or command == "ge":
+        position = 2
+        msg = "0d000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+    elif command == "globalDeregister" or command == "gd":
+        position = 10
+        msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "EIDQuery" or command == "eq":
         position = 2
         msg = "71000000" + requestID + content + timeStamp
@@ -320,7 +338,7 @@ def show_details(receive_message: str):
             child_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                     int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        time_stamp = receive_message[p:p+8]
+        time_stamp = receive_message[p:p + 8]
         print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timeStamp]: {}"
               .format(request_id, status, time_stamp))
         for ld in level_delay_list:
@@ -376,8 +394,8 @@ def run():
         msg, p = getMsg("EIDBatchDeregister", NA)
     else:
         # batch register only for eid like: bbb...bb19210
-        if (command == 'register' or command == 'r') and args.sequence:
-            msg, p = getSequenceMsg(args.number)
+        if (command == 'register' or command == 'r' or command == 'gr') and args.sequence:
+            msg, p = getSequenceMsg(args.number, command)
         elif command == "custom":
             msg = args.message
             if msg is None:
