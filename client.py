@@ -21,7 +21,7 @@ def getparser():
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
     parser.add_argument('--command', '-c', type=str, default="custom",
                         choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl',
-                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge'],
+                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd'],
                         help="Input what kind of message to send, "
                              "'r' -> register; "
                              "'d' -> deregister; "
@@ -29,6 +29,7 @@ def getparser():
                              "'eid' -> eid resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
                              "'gr' -> batch-deregister; "
                              "'gd' -> globalDeregister; "
+                             "'gbd' -> globalBatchDeregister; "
                              "'ge' -> globalResolve; eid global resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; "
                              "'tlv' -> tlv resolve, use EID: 0000000000000000000000000000000000000000; "
                              "'rnl' -> get rnl response from resolve node; "
@@ -109,12 +110,12 @@ def getSequenceEID(end: int = 1):
 def getSequenceMsg(num: int, command: str):
     NA = "99999999999999999999999999999999"
     position = 10  # 标记返回报文成功的标志位的起始位置
-    timeStamp = getTimeStamp()
-    requestID = getRequestID()
     msg = []
     if num >= 0:
         eid_list = getSequenceEID(num)
         for i in range(num):
+            timeStamp = getTimeStamp()
+            requestID = getRequestID()
             if command == "r" or command == "register":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
             elif command == 'gr':
@@ -159,6 +160,9 @@ def getMsg(command: str, content: str = ""):
         position = 2
         msg = "0d000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
     elif command == "globalDeregister" or command == "gd":
+        position = 10
+        msg = "0f" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+    elif command == "globalBatchDeregister" or command == "gbd":
         position = 10
         msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
     elif command == "EIDQuery" or command == "eq":
