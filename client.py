@@ -151,6 +151,7 @@ def getMsg(command: str, content: str = ""):
     :return: msg: 请求报文;
              position: 返回报文标志位的起始位置，用于判断指令是否执行成功
     """
+    msg = ""
     position = 0  # 标记返回报文成功的标志位的起始位置
     timeStamp = getTimeStamp()
     requestID = getRequestID()
@@ -187,7 +188,7 @@ def getMsg(command: str, content: str = ""):
         position = 2
         msg = "71000000" + requestID + content + timeStamp
     elif command == "EIDCIDQuery" or command == "ecq":
-        position = FLAG_EID_CID_QUERY
+        position = FLAG_ECID_QUERY
         queryType = content[:1]
         origin_content = content[1:]
         if queryType == "0" or queryType == "1":
