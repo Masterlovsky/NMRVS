@@ -26,9 +26,9 @@ def getTimeStamp() -> str:
 def getparser():
     parser = argparse.ArgumentParser(description="NMR client python version")
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
-    parser.add_argument('--port', '-p', required=True, default=10061, type=int,
-                        help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3")
-    parser.add_argument('--command', '-c', type=str, default="custom",
+    parser.add_argument('-p', '--port', required=True, default=10061, type=int,
+                        help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
+    parser.add_argument('-c', '--command', type=str, default="custom",
                         choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl',
                                  'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd'],
                         help="Input what kind of message to send, "
@@ -45,37 +45,37 @@ def getparser():
                              "'agent' -> get rnl response from server-agent; "
                              "'dm' -> delay measure from client to resolve node; "
                              "'custom' -> user defined payload message, use with parameter -m <msg>; ")
-    parser.add_argument('--EIDQuery', '-eq', required=False, type=str,
+    parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
-    parser.add_argument('--EIDCIDQuery', '-ecq', required=False, type=str, nargs=2,
+    parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs=2, metavar=("QueryType", "Content"),
                         help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip}."
                              " use: -ecq <QueryType> <EID>/<CID>/<Tag>")
-    parser.add_argument('--TagQuery', '-tq', required=False, type=str,
+    parser.add_argument('-tq', '--TagQuery', required=False, type=str, metavar="TLV(HexStr)",
                         help="resolve self defined Tag, use: -tq <tlv>")
-    parser.add_argument('--EIDRegister', '-er', required=False, type=str, nargs='+',
+    parser.add_argument('-er', '--EIDRegister', required=False, type=str, nargs='+', metavar=("EID+NA", "TAG(opt)"),
                         help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
-    parser.add_argument('--EIDCIDRegister', '-ecr', required=False, type=str, nargs='+',
+    parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+', metavar=("EID+CID+NA", "TAG(opt)"),
                         help="register self defined EID+CID+NA and optional tag, use: -er <EID+CID+NA> <tag>")
-    parser.add_argument('--EIDDeregister', '-ed', required=False, type=str,
+    parser.add_argument('-ed', '--EIDDeregister', required=False, type=str, metavar="EID+NA",
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
-    parser.add_argument('--EIDCIDDeregister', '-ecd', required=False, type=str,
+    parser.add_argument('-ecd', '--EIDCIDDeregister', required=False, type=str, metavar="EID+CID+NA",
                         help="deregister self defined EID+CID+NA,  use: -ecd <EID+CID+NA>")
-    parser.add_argument('--EIDBatchDeregister', '-ebd', required=False, type=str,
+    parser.add_argument('-ebd', '--EIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
-    parser.add_argument('--EIDCIDBatchDeregister', '-ecbd', required=False, type=str,
+    parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="EID+CID Batch-deregister from self defined NA,  use: -ecbd <NA>")
     parser.add_argument('--sequence', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
-    parser.add_argument('--number', '-n', required=False, default=1, type=int,
+    parser.add_argument('-n', '--number', required=False, default=1, type=int,
                         help="Number of packets to send. set n = -1 if number is infinite")
-    parser.add_argument('--speed', '-s', required=False, default=-1, type=int,
+    parser.add_argument('-s', '--speed', required=False, default=-1, type=int,
                         help="packets sending speed(pps). Only when there are --force parameters in effect")
     parser.add_argument('--force', required=False, action="store_true", default=False,
                         help="force send message without waiting response, use to increase PPS")
-    parser.add_argument('--message', '-m', required=False, type=str,
+    parser.add_argument('-m', '--message', required=False, type=str, metavar="custom message",
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
-    parser.add_argument('--detail', '-d', required=False, action="store_true", default=False,
+    parser.add_argument('-d', '--detail', required=False, action="store_true", default=False,
                         help="analyze response message and show detail. (Only has effect in normal mode)")
     return parser
 
