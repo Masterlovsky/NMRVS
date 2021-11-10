@@ -39,12 +39,12 @@ def packet_creator(command: str, eid="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
         ipv6ToHexString(BGP_NA)
 
     # ! 模拟客户端给 controller 发包
-    pkt_r = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src="2400:dd01:1037:9:192:168:9:201", dst="::") / IDP(
+    pkt_r = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src=USER_NA, dst="::") / IDP(
         destEID=int("0" * 40, 16)) / IDPNRS(queryType="register") / bytes.fromhex(payload_register)
-    pkt_d = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src="2400:dd01:1037:9:192:168:9:201", dst="::") / IDP(
-        destEID=int("0" * 40, 16)) / IDPNRS(queryType="register") / bytes.fromhex(payload_deregister)
-    pkt_eq = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src="2400:dd01:1037:9:192:168:9:201",
-                                                   dst="2400:dd01:1037:9:192:168:9:201") / IDP(
+    pkt_d = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src=USER_NA, dst="::") / IDP(
+        destEID=int("0" * 40, 16)) / IDPNRS(queryType="deregister") / bytes.fromhex(payload_deregister)
+    pkt_eq = Ether(dst="A4:23:05:00:11:02") / IPv6(nh=0x99, src=USER_NA,
+                                                   dst="::") / IDP(
         destEID=int(eid, 16)) / IDPNRS(queryType="resolve")
 
     # ! 模拟controller给bgp发包
@@ -96,20 +96,24 @@ def ipv6ToHexString(ipv6addr: str) -> str:
     return hexipstr
 
 
-def main():
+def main(command):
 
     # pkt_r = Ether() / IPv6(dst="2400:dd01:1037:201:192:168:47:198")
     # pkt = [packet_creator("br"), packet_creator("br", "a"*40), packet_creator("br", "c"*40), packet_creator(
     #     "beq"), packet_creator("bd"), packet_creator("beq")]
-    pkt = packet_creator("beq", "a" * 40)
+    pkt = packet_creator(command)
     # pkt = packet_creator("br", "a"*40)
     # sendp(pkt, iface="em4", loop=1, inter=0.2)
-    sendp(pkt, iface="p7p4", count=1)
+    sendp(pkt, iface="p4p4", count=1)
     # sendp(Ether(dst="00:00:00:01:02:03")/IPv6(dst="2400:dd01:1037:100:20::22")/UDP(dport=89), iface="p7p4", count=1)
 
 
 if __name__ == '__main__':
-    USER_NA = "6666:" * 7 + "6666"
-    CONTROLLER_NA = "2400:dd01:1037:100:224::226"
-    BGP_NA = "2400:dd01:1037:100:20::22"
-    main()
+    USER_NA = "2400:dd01:1037:9:9::9"
+    CONTROLLER_NA = "2400:dd01:1037:9:10::10"
+    BGP_NA = "2400:dd01:1037:10:20::20"
+    if len(sys.argv) != 2:
+        print("argument must exist! use as: python3 sendRawPacket.py r/d/eq/")
+        exit(1)
+    else:
+        main(sys.argv[1])
