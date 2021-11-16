@@ -31,20 +31,20 @@ def getparser():
     parser.add_argument('-c', '--command', type=str, default="custom",
                         choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl',
                                  'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd'],
-                        help="Input what kind of message to send, \n\r"
-                             "'r' -> register; \n\r"
-                             "'d' -> deregister; \n\r"
-                             "'bd' -> batch-deregister; \n\r"
-                             "'eid' -> eid resolve simple, use EID: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb;\n\r"
-                             "'gr' -> global-register; \n\r"
-                             "'gd' -> global-deregister; \n\r"
-                             "'gbd' -> global-BatchDeregister; \n\r"
-                             "'ge' -> globalResolve; eid global resolve simple;\n\r"
-                             "'tlv' -> tlv resolve, use EID: 0000000000000000000000000000000000000000;\n\r"
-                             "'rnl' -> get rnl response from resolve node; \n\r"
-                             "'agent' -> get rnl response from server-agent; \n\r"
-                             "'dm' -> delay measure from client to resolve node; \n\r"
-                             "'custom' -> user defined payload message, use with parameter -m <msg>; \n\r")
+                        help="Input what kind of message to send,           "
+                             "'r' -> register;                              "
+                             "'d' -> deregister;                            "
+                             "'bd' -> batch-deregister;                     "
+                             "'eid' -> eid resolve simple, use EID: bbb..bb;"
+                             "'gr' -> global-register;                      "
+                             "'gd' -> global-deregister;                    "
+                             "'gbd' -> global-batchDeregister;              "
+                             "'ge' -> global-resolve; eid global resolve simple; "
+                             "'tlv' -> tlv resolve, use EID: 000...00;      "
+                             "'rnl' -> get rnl response from resolve node;  "
+                             "'agent' -> get rnl response from server-agent;"
+                             "'dm' -> delay measure from client to resolve node;"
+                             "'custom' -> user defined payload message, use with parameter -m <msg>;")
     parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
     parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs=2, metavar=("QueryType", "Content"),
