@@ -178,7 +178,7 @@ def getMsg(command: str, content: str = ""):
         position = 10
         msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" + timeStamp
     elif command == "resolve_cid" or command == "ecid":
-        position = 2
+        position = FLAG_ECID_QUERY
         msg = "7100000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "0" * 64 + timeStamp
 
     elif command == "resolve+tlv" or command == "tlv":
