@@ -29,13 +29,16 @@ def getparser():
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
     parser.add_argument('-c', '--command', type=str, default="custom",
-                        choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl',
+                        choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl', 'rcid', 'ecid', 'dcid',
                                  'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd'],
                         help="Input what kind of message to send,           "
                              "'r' -> register;                              "
                              "'d' -> deregister;                            "
                              "'bd' -> batch-deregister;                     "
                              "'eid' -> eid resolve simple, use EID: bbb..bb;"
+                             "'rcid' -> eid+cid register simple.            "
+                             "'ecid' -> eid+cid resolve simple              "
+                             "'dcid' -> eid+cid deregister simple           "
                              "'gr' -> global-register;                      "
                              "'gd' -> global-deregister;                    "
                              "'gbd' -> global-batchDeregister;              "
@@ -54,7 +57,8 @@ def getparser():
                         help="resolve self defined Tag, use: -tq <tlv>")
     parser.add_argument('-er', '--EIDRegister', required=False, type=str, nargs='+', metavar=("EID+NA", "TAG(opt)"),
                         help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
-    parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+', metavar=("EID+CID+NA", "TAG(opt)"),
+    parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+',
+                        metavar=("EID+CID+NA", "TAG(opt)"),
                         help="register self defined EID+CID+NA and optional tag, use: -er <EID+CID+NA> <tag>")
     parser.add_argument('-ed', '--EIDDeregister', required=False, type=str, metavar="EID+NA",
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
@@ -165,6 +169,18 @@ def getMsg(command: str, content: str = ""):
     elif command == "resolve" or command == "e" or command == "eid":
         position = 2
         msg = "71000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+
+    elif command == "register_cid" or command == "rcid":
+        position = 10
+        msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" \
+                                                                                         "030100" + timeStamp + "0000"
+    elif command == "deregister_cid" or command == "dcid":
+        position = 10
+        msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" + timeStamp
+    elif command == "resolve_cid" or command == "ecid":
+        position = 2
+        msg = "7100000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "0" * 64 + timeStamp
+
     elif command == "resolve+tlv" or command == "tlv":
         position = 2
         msg = "71000006" + requestID + "0000000000000000000000000000000000000000" + timeStamp + "010101020102"
