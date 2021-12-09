@@ -577,11 +577,29 @@ def run():
             else:
                 s.sendto(bytes.fromhex(msg[i]), ADDRESS)
             if args.force:
-                if speed > 0 and number >= 10000 and i % (number // 20) == 0:
-                    sleepTime = (number // 20) / speed - (time.time() - lastCheckTime)
-                    time.sleep(sleepTime if sleepTime > 0 else 0)
-                    lastCheckTime = time.time()
-                if i != 0 and i % (number // 5) == 0:
+                if speed > 0:
+                    if number < 100000:
+                        if i != 0 and i % (number // 20) == 0:  # 100000个包以内每发number/20个包调整一次时延，共调整20次。
+                            sleepTime = (number // 20) / speed - (time.time() - lastCheckTime)
+                            if sleepTime > 0:
+                                time.sleep(sleepTime)
+                            lastCheckTime = time.time()
+                    else:
+                        if i != 0 and i % 5000 == 0:  # 100000个包以上每发5000个包调整一次时延，共调整number/5000次。
+                            sleepTime = 5000 / speed - (time.time() - lastCheckTime)
+                            if sleepTime > 0:
+                                time.sleep(sleepTime)
+                            lastCheckTime = time.time()
+                # 打印输出当前的发包速率
+                if i != 0 and number < 10000 and i % (number // 5) == 0:
+                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    pps = int(i / delay * 1000)
+                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                elif i != 0 and number < 100000 and i % (number // 10) == 0:
+                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    pps = int(i / delay * 1000)
+                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                elif i != 0 and i % 10000 == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
@@ -620,7 +638,8 @@ def run():
             if args.force:
                 if speed > 0 and count % 5000 == 0:
                     sleepTime = 5000 / speed - (time.time() - lastCheckTime)
-                    time.sleep(sleepTime if sleepTime > 0 else 0)
+                    if sleepTime > 0:
+                        time.sleep(sleepTime)
                     lastCheckTime = time.time()
                 if count % 50000 == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
