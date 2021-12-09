@@ -591,15 +591,15 @@ def run():
                                 time.sleep(sleepTime)
                             lastCheckTime = time.time()
                 # 打印输出当前的发包速率
-                if i != 0 and number < 10000 and i % (number // 5) == 0:
+                if i != 0 and number <= 10000 and i % (number // 5) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
-                elif i != 0 and number < 100000 and i % (number // 10) == 0:
+                elif i != 0 and number <= 100000 and i % (number // 10) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
-                elif i != 0 and i % 10000 == 0:
+                elif i != 0 and i % 20000 == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
