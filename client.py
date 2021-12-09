@@ -16,6 +16,7 @@ EID_CID_STR_LEN = 104
 EID_CID_NA_STR_LEN = 136
 FLAG_ECID_QUERY = 2000
 FLAG_DELAY_MEASURE = 9999
+burst_size = 2000  # 当发包数量大于100000个或发包数量不限时生效，规定burst_size
 
 
 def getTimeStamp() -> str:
@@ -81,6 +82,9 @@ def getparser():
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
     parser.add_argument('-d', '--detail', required=False, action="store_true", default=False,
                         help="analyze response message and show detail. (Only has effect in normal mode)")
+    parser.add_argument('-b', '--burstSize', required=False, type=int, default=2000,
+                        help="The number of concurrent packets. Delay adjustment is triggered after each concurrent burst_size of packets. "
+                             "(Only has effect when use '-n -1' or '-n 100000+')")
     return parser
 
 
@@ -562,6 +566,7 @@ def run():
         return
     number = args.number
     speed = args.speed
+    burstSize = args.burstSize
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
     if number < 0:
@@ -585,8 +590,8 @@ def run():
                                 time.sleep(sleepTime)
                             lastCheckTime = time.time()
                     else:
-                        if i != 0 and i % 5000 == 0:  # 100000个包以上每发5000个包调整一次时延，共调整number/5000次。
-                            sleepTime = 5000 / speed - (time.time() - lastCheckTime)
+                        if i != 0 and i % burstSize == 0:  # 100000个包以上每发burst_size个包调整一次时延，共调整number/burst_size次。
+                            sleepTime = burstSize / speed - (time.time() - lastCheckTime)
                             if sleepTime > 0:
                                 time.sleep(sleepTime)
                             lastCheckTime = time.time()
@@ -636,8 +641,8 @@ def run():
             s.sendto(bytes.fromhex(msg), ADDRESS)
             count += 1
             if args.force:
-                if speed > 0 and count % 5000 == 0:
-                    sleepTime = 5000 / speed - (time.time() - lastCheckTime)
+                if speed > 0 and count % burstSize == 0:
+                    sleepTime = burstSize / speed - (time.time() - lastCheckTime)
                     if sleepTime > 0:
                         time.sleep(sleepTime)
                     lastCheckTime = time.time()
