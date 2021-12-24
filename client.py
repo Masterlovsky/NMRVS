@@ -154,10 +154,11 @@ def getSequenceMsg(num: int, command: str):
     return msg, position
 
 
-def getMsg(command: str, content: str = "", num: int = 1):
+def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: bool = False):
     """
     从输入指令判断对应的注册、注销、解析、RNL获取等报文，获取带有随机requestID的报文列表
-    :param num: 发送报文个数
+    :param flag_random_reqID: 是否使用随机requestID，默认不使用
+    :param num: 发送报文个数，默认只发送一个
     :param content: if command is EIDQuery and EIDRegister, content is EID or EID+NA
     :param command:  用户输入的指令string
     :return: msg_l: 请求报文列表;
@@ -165,7 +166,7 @@ def getMsg(command: str, content: str = "", num: int = 1):
     """
     msg_l = []
     position = 0  # 标记返回报文成功的标志位的起始位置
-    flag = num == 1  # 标记是否是普通消息（不需要random requestID）
+    flag = not flag_random_reqID  # 标记是否是普通消息（不需要random requestID）
     while num > 0:
         msg = ""
         timeStamp = getTimeStamp()
@@ -487,13 +488,14 @@ def run():
     number = args.number
     speed = args.speed
     burstSize = args.burstSize
+    flag_random_requestID = args.random
 
     if args.EIDQuery is not None:
         EID = args.EIDQuery
         if len(EID) != EID_STR_LEN:
             print("EID length error!")
             return
-        msg, p = getMsg("EIDQuery", EID, number)
+        msg, p = getMsg("EIDQuery", EID, number, flag_random_requestID)
 
     elif args.EIDCIDQuery is not None:
         queryType = args.EIDCIDQuery[0]
@@ -506,11 +508,11 @@ def run():
         else:
             print("invalid input <EID>/<CID>/<TAG> length error!")
             return
-        msg, p = getMsg("EIDCIDQuery", content, number)
+        msg, p = getMsg("EIDCIDQuery", content, number, flag_random_requestID)
 
     elif args.TagQuery is not None:
         tlv_msg = args.TagQuery
-        msg, p = getMsg("TagQuery", tlv_msg, number)
+        msg, p = getMsg("TagQuery", tlv_msg, number, flag_random_requestID)
 
     elif args.EIDRegister is not None:
         if len(args.EIDRegister) > 1:
@@ -522,7 +524,7 @@ def run():
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error! Should be EID(40 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDRegister", EIDNA + tag, number)
+        msg, p = getMsg("EIDRegister", EIDNA + tag, number, flag_random_requestID)
 
     elif args.EIDCIDRegister is not None:
         if len(args.EIDCIDRegister) > 1:
@@ -534,21 +536,21 @@ def run():
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDRegister", EIDCIDNA + tag, number)
+        msg, p = getMsg("EIDCIDRegister", EIDCIDNA + tag, number, flag_random_requestID)
 
     elif args.EIDDeregister is not None:
         EIDNA = args.EIDDeregister
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("EIDDeregister", EIDNA, number)
+        msg, p = getMsg("EIDDeregister", EIDNA, number, flag_random_requestID)
 
     elif args.EIDCIDDeregister is not None:
         EIDCIDNA = args.EIDCIDDeregister
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDDeregister", EIDCIDNA, number)
+        msg, p = getMsg("EIDCIDDeregister", EIDCIDNA, number, flag_random_requestID)
 
     elif args.EIDBatchDeregister is not None:
         NA = args.EIDBatchDeregister
@@ -575,8 +577,8 @@ def run():
                 return
             p = 0
         else:
-            msg, p = getMsg(command, "", number)
-    if msg == "":
+            msg, p = getMsg(command, "", number, flag_random_requestID)
+    if msg == "" or len(msg) == 0:
         print("Getting message is none!")
         return
 
@@ -681,4 +683,5 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    # run()
+    print(getMsg("eid", "", 10)[0])
