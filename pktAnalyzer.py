@@ -150,7 +150,7 @@ def run():
                 pkt_pair_time_dict[requestID].put(pkt.time)
         # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
         if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
-            if requestID is not None:
+            if requestID is not None and requestID in pkt_pair_time_dict.keys():
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
     analyzeDelay(delay_l, timeout)
