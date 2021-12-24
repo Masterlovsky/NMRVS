@@ -7,6 +7,7 @@ import argparse
 import random
 import socket
 import time
+import uuid
 
 EID_STR_LEN = 40
 CID_STR_LEN = 64
@@ -78,6 +79,8 @@ def getparser():
                         help="packets sending speed(pps). Only when there are --force parameters in effect")
     parser.add_argument('--force', required=False, action="store_true", default=False,
                         help="force send message without waiting response, use to increase PPS")
+    parser.add_argument('--random', required=False, action="store_true", default=False,
+                        help="Use random requestID when sending multiple message")
     parser.add_argument('-m', '--message', required=False, type=str, metavar="custom message",
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
     parser.add_argument('-d', '--detail', required=False, action="store_true", default=False,
@@ -106,7 +109,7 @@ def getRequestID() -> str:
     """
     :return: return random requestID(4 byte hex string)
     """
-    return hex(random.randint(268435456, 4294967295))[2:]
+    return str(uuid.uuid4())[:8]
 
 
 def getRandomEID() -> str:
@@ -151,120 +154,129 @@ def getSequenceMsg(num: int, command: str):
     return msg, position
 
 
-def getMsg(command: str, content: str = ""):
+def getMsg(command: str, content: str = "", num: int = 1):
     """
-    从输入指令判断对应的注册、注销、解析、RNL获取等报文
+    从输入指令判断对应的注册、注销、解析、RNL获取等报文，获取带有随机requestID的报文列表
+    :param num: 发送报文个数
     :param content: if command is EIDQuery and EIDRegister, content is EID or EID+NA
     :param command:  用户输入的指令string
-    :return: msg: 请求报文;
+    :return: msg_l: 请求报文列表;
              position: 返回报文标志位的起始位置，用于判断指令是否执行成功
     """
-    msg = ""
+    msg_l = []
     position = 0  # 标记返回报文成功的标志位的起始位置
-    timeStamp = getTimeStamp()
-    requestID = getRequestID()
-    if command == "register" or command == "r":
-        position = 10
-        msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-                                 "030100" + timeStamp + "0006010101020102"
-    elif command == "deregister" or command == "d":
-        position = 10
-        msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
-    elif command == "resolve" or command == "e" or command == "eid":
-        position = 2
-        msg = "71000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
-
-    elif command == "register_cid" or command == "rcid":
-        position = 10
-        msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" \
-                                                                                         "030100" + timeStamp + "0000"
-    elif command == "deregister_cid" or command == "dcid":
-        position = 10
-        msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" + timeStamp
-    elif command == "resolve_cid" or command == "ecid":
-        position = FLAG_ECID_QUERY
-        msg = "7100000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "0" * 64 + timeStamp
-
-    elif command == "resolve+tlv" or command == "tlv":
-        position = 2
-        msg = "71000006" + requestID + "0000000000000000000000000000000000000000" + timeStamp + "010101020102"
-    elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
-        position = 10
-        msg = "73" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
-    elif command == "globalRegister" or command == "gr":
-        position = 10
-        msg = "0b" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-                                 "010100" + timeStamp + "0000"
-    elif command == "globalResolve" or command == "ge":
-        position = 2
-        msg = "0d000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
-    elif command == "globalDeregister" or command == "gd":
-        position = 10
-        msg = "0f" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
-    elif command == "globalBatchDeregister" or command == "gbd":
-        position = 10
-        msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
-    elif command == "EIDQuery" or command == "eq":
-        position = 2
-        msg = "71000000" + requestID + content + timeStamp
-    elif command == "EIDCIDQuery" or command == "ecq":
-        position = FLAG_ECID_QUERY
-        queryType = content[:1]
-        origin_content = content[1:]
-        if queryType == "0" or queryType == "1":
-            msg = "7100" + "0" + queryType + "0000" + requestID + origin_content + "0" * CID_STR_LEN + timeStamp
-        elif queryType == "2":
-            msg = "7100" + "02" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
-        elif queryType == "3":
-            msg = "7100" + "03" + "0000" + requestID + origin_content + timeStamp
-        elif queryType == "4":
-            tlv_len = hex(int(len(origin_content) / 2))[2:]
-            tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-            msg = "7100" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
-    elif command == "TagQuery" or command == "tq":
-        tlv_len = hex(int(len(content) / 2))[2:]
-        tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-        position = 2
-        msg = "7100" + tlv_len_str + requestID + "0" * 40 + timeStamp + content
-    elif command == "EIDRegister" or command == "er":
-        eid_na = content[:72]
-        tlv = content[72:]
-        tlv_len = hex(int(len(tlv) / 2))[2:]
-        tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-        position = 10
-        msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
-    elif command == "EIDCIDRegister" or command == "ecr":
-        eid_cid_na = content[:136]
-        tlv = content[136:]
-        tlv_len = hex(int(len(tlv) / 2))[2:]
-        tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-        position = 10
-        msg = "6f" + requestID + eid_cid_na + "030100" + timeStamp + tlv_len_str + tlv
-    elif command == "EIDDeregister" or command == "ed":
-        position = 10
-        msg = "73" + requestID + "00" + content + timeStamp
-    elif command == "EIDCIDDeregister" or command == "ecd":
-        position = 10
-        msg = "73" + requestID + "00" + content + timeStamp
-    elif command == "EIDBatchDeregister" or command == "ebd":
-        position = 10
-        msg = "73" + requestID + "01" + "b" * EID_STR_LEN + content + timeStamp
-    elif command == "EIDCIDBatchDeregister" or command == "ecbd":
-        position = 10
-        msg = "73" + requestID + "01" + "b" * EID_CID_STR_LEN + content + timeStamp
-    elif command == "rnl":
-        position = 10
-        msg = "0d" + requestID + timeStamp
-    elif command == "connect" or command == "agent":
-        position = 10
-        msg = "1d" + requestID + timeStamp
-    elif command == "dm" or command == "delay-measure":
-        msg = "03" + timeStamp
-        position = FLAG_DELAY_MEASURE  # 选一个比较大的数当做标识
-    else:
-        # todo : 批量随机注册实现？
+    flag = num == 1  # 标记是否是普通消息（不需要random requestID）
+    while num > 0:
         msg = ""
-    return msg, position
+        timeStamp = getTimeStamp()
+        requestID = getRequestID()
+        if command == "register" or command == "r":
+            position = 10
+            msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
+                                     "030100" + timeStamp + "0006010101020102"
+        elif command == "deregister" or command == "d":
+            position = 10
+            msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        elif command == "resolve" or command == "e" or command == "eid":
+            position = 2
+            msg = "71000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+
+        elif command == "register_cid" or command == "rcid":
+            position = 10
+            msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" \
+                                                                                             "030100" + timeStamp + "0000"
+        elif command == "deregister_cid" or command == "dcid":
+            position = 10
+            msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" + timeStamp
+        elif command == "resolve_cid" or command == "ecid":
+            position = FLAG_ECID_QUERY
+            msg = "7100000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "0" * 64 + timeStamp
+
+        elif command == "resolve+tlv" or command == "tlv":
+            position = 2
+            msg = "71000006" + requestID + "0000000000000000000000000000000000000000" + timeStamp + "010101020102"
+        elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
+            position = 10
+            msg = "73" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        elif command == "globalRegister" or command == "gr":
+            position = 10
+            msg = "0b" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
+                                     "010100" + timeStamp + "0000"
+        elif command == "globalResolve" or command == "ge":
+            position = 2
+            msg = "0d000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+        elif command == "globalDeregister" or command == "gd":
+            position = 10
+            msg = "0f" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        elif command == "globalBatchDeregister" or command == "gbd":
+            position = 10
+            msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        elif command == "EIDQuery" or command == "eq":
+            position = 2
+            msg = "71000000" + requestID + content + timeStamp
+        elif command == "EIDCIDQuery" or command == "ecq":
+            position = FLAG_ECID_QUERY
+            queryType = content[:1]
+            origin_content = content[1:]
+            if queryType == "0" or queryType == "1":
+                msg = "7100" + "0" + queryType + "0000" + requestID + origin_content + "0" * CID_STR_LEN + timeStamp
+            elif queryType == "2":
+                msg = "7100" + "02" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
+            elif queryType == "3":
+                msg = "7100" + "03" + "0000" + requestID + origin_content + timeStamp
+            elif queryType == "4":
+                tlv_len = hex(int(len(origin_content) / 2))[2:]
+                tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
+                msg = "7100" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
+        elif command == "TagQuery" or command == "tq":
+            tlv_len = hex(int(len(content) / 2))[2:]
+            tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
+            position = 2
+            msg = "7100" + tlv_len_str + requestID + "0" * 40 + timeStamp + content
+        elif command == "EIDRegister" or command == "er":
+            eid_na = content[:72]
+            tlv = content[72:]
+            tlv_len = hex(int(len(tlv) / 2))[2:]
+            tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
+            position = 10
+            msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
+        elif command == "EIDCIDRegister" or command == "ecr":
+            eid_cid_na = content[:136]
+            tlv = content[136:]
+            tlv_len = hex(int(len(tlv) / 2))[2:]
+            tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
+            position = 10
+            msg = "6f" + requestID + eid_cid_na + "030100" + timeStamp + tlv_len_str + tlv
+        elif command == "EIDDeregister" or command == "ed":
+            position = 10
+            msg = "73" + requestID + "00" + content + timeStamp
+        elif command == "EIDCIDDeregister" or command == "ecd":
+            position = 10
+            msg = "73" + requestID + "00" + content + timeStamp
+        elif command == "EIDBatchDeregister" or command == "ebd":
+            position = 10
+            msg = "73" + requestID + "01" + "b" * EID_STR_LEN + content + timeStamp
+        elif command == "EIDCIDBatchDeregister" or command == "ecbd":
+            position = 10
+            msg = "73" + requestID + "01" + "b" * EID_CID_STR_LEN + content + timeStamp
+        elif command == "rnl":
+            position = 10
+            msg = "0d" + requestID + timeStamp
+        elif command == "connect" or command == "agent":
+            position = 10
+            msg = "1d" + requestID + timeStamp
+        elif command == "dm" or command == "delay-measure":
+            msg = "03" + timeStamp
+            position = FLAG_DELAY_MEASURE  # 选一个比较大的数当做标识
+        else:
+            # todo : 批量随机注册实现？
+            msg = ""
+        if flag:
+            return msg, position
+        if msg != "":
+            msg_l.append(msg)
+        num -= 1
+    return msg_l, position
 
 
 def show_details(receive_message: str):
@@ -472,12 +484,16 @@ def run():
     family = checkIP(IP)  # check IPv4/IPv6
     command = args.command
     infFlag = False
+    number = args.number
+    speed = args.speed
+    burstSize = args.burstSize
+
     if args.EIDQuery is not None:
         EID = args.EIDQuery
         if len(EID) != EID_STR_LEN:
             print("EID length error!")
             return
-        msg, p = getMsg("EIDQuery", EID)
+        msg, p = getMsg("EIDQuery", EID, number)
 
     elif args.EIDCIDQuery is not None:
         queryType = args.EIDCIDQuery[0]
@@ -490,11 +506,11 @@ def run():
         else:
             print("invalid input <EID>/<CID>/<TAG> length error!")
             return
-        msg, p = getMsg("EIDCIDQuery", content)
+        msg, p = getMsg("EIDCIDQuery", content, number)
 
     elif args.TagQuery is not None:
         tlv_msg = args.TagQuery
-        msg, p = getMsg("TagQuery", tlv_msg)
+        msg, p = getMsg("TagQuery", tlv_msg, number)
 
     elif args.EIDRegister is not None:
         if len(args.EIDRegister) > 1:
@@ -506,7 +522,7 @@ def run():
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error! Should be EID(40 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDRegister", EIDNA + tag)
+        msg, p = getMsg("EIDRegister", EIDNA + tag, number)
 
     elif args.EIDCIDRegister is not None:
         if len(args.EIDCIDRegister) > 1:
@@ -518,21 +534,21 @@ def run():
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDRegister", EIDCIDNA + tag)
+        msg, p = getMsg("EIDCIDRegister", EIDCIDNA + tag, number)
 
     elif args.EIDDeregister is not None:
         EIDNA = args.EIDDeregister
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("EIDDeregister", EIDNA)
+        msg, p = getMsg("EIDDeregister", EIDNA, number)
 
     elif args.EIDCIDDeregister is not None:
         EIDCIDNA = args.EIDCIDDeregister
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDDeregister", EIDCIDNA)
+        msg, p = getMsg("EIDCIDDeregister", EIDCIDNA, number)
 
     elif args.EIDBatchDeregister is not None:
         NA = args.EIDBatchDeregister
@@ -555,18 +571,15 @@ def run():
         elif command == "custom":
             msg = args.message
             if msg is None:
-                print("Custom message is empty, please add '-m <msg>' or -er <EID+NA> or -eq <EID> "
-                      "or -ed <EID+NA> or -ebd <NA>.")
+                print("Custom message is empty, please add '-m <msg>'")
                 return
             p = 0
         else:
-            msg, p = getMsg(command)
+            msg, p = getMsg(command, "", number)
     if msg == "":
         print("Getting message is none!")
         return
-    number = args.number
-    speed = args.speed
-    burstSize = args.burstSize
+
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
     if number < 0:
@@ -633,7 +646,7 @@ def run():
     else:
         # 循环不间断发送数据包
         if type(msg) != str:
-            print("Error! register sequence EID only supported in limited packet numbers.")
+            print('Error! "random requestID mode" / "sequence EID mode" only supported in limited packet numbers.')
             return
         count = 0
         lastCheckTime = startMsgSendTime
