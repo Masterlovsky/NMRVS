@@ -683,5 +683,4 @@ def run():
 
 
 if __name__ == '__main__':
-    # run()
-    print(getMsg("eid", "", 10)[0])
+    run()
