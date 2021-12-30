@@ -167,7 +167,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
     msg_l = []
     position = 0  # 标记返回报文成功的标志位的起始位置
     flag = not flag_random_reqID  # 标记是否是普通消息（不需要random requestID）
-    while num > 0:
+    while num != 0:
         msg = ""
         timeStamp = getTimeStamp()
         requestID = getRequestID()
@@ -272,7 +272,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
         else:
             # todo : 批量随机注册实现？
             msg = ""
-        if flag:
+        if flag or num < 0:
             return msg, position
         if msg != "":
             msg_l.append(msg)
