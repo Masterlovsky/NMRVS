@@ -661,7 +661,7 @@ def run():
                     if sleepTime > 0:
                         time.sleep(sleepTime)
                     lastCheckTime = time.time()
-                if count % 50000 == 0:
+                if count % (speed * 3) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(count / delay * 1000)
                     print("Already send " + str(count) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
