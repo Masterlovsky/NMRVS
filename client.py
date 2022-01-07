@@ -101,17 +101,17 @@ def formatTime(t: float) -> str:
         # hour
         h = t // 3600000
         t -= h * 3600000
-        f_time += str(int(h)) + "hour, "
+        f_time += str(int(h)) + "hour,"
     if t > 60000:
         # min
         m = t // 60000
         t -= m * 60000
-        f_time += str(int(m)) + "min, "
+        f_time += str(int(m)) + "min,"
     if t > 1000:
         # s
         s = t // 1000
         t -= s * 1000
-        f_time += str(int(s)) + "s, "
+        f_time += str(int(s)) + "s,"
     f_time += str(round(t, 3)) + " ms"
     return f_time
 
