@@ -91,6 +91,31 @@ def getparser():
     return parser
 
 
+def formatTime(t: float) -> str:
+    """
+    :param t: an integer value with millisecond unit
+    :rtype: value in adaptive string time unit
+    """
+    f_time = ""
+    if t > 3600000:
+        # hour
+        h = t // 3600000
+        t -= h * 3600000
+        f_time += str(h) + " hour,"
+    if t > 60000:
+        # min
+        m = t // 60000
+        t -= m * 60000
+        f_time += str(m) + " min,"
+    if t > 1000:
+        # s
+        s = t // 1000
+        t -= s * 1000
+        f_time += str(s) + " s,"
+    f_time += str(t) + " ms"
+    return f_time
+
+
 def checkIP(ip: str):
     """
     check IPv4 or IPv6
@@ -614,15 +639,15 @@ def run():
                 if i != 0 and number <= 10000 and i % (number // 5) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
-                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                    print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 elif i != 0 and number <= 100000 and i % (number // 10) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
-                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                    print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 elif i != 0 and i % 20000 == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(i / delay * 1000)
-                    print("Already send " + str(i) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                    print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 continue
             try:
                 recv, addr = s.recvfrom(1024)
@@ -664,7 +689,7 @@ def run():
                 if count % (speed * 3) == 0:
                     delay = round((time.time() - startMsgSendTime) * 1000, 3)
                     pps = int(count / delay * 1000)
-                    print("Already send " + str(count) + " packets, use: " + str(delay) + " ms, pps: " + str(pps))
+                    print("Already send " + str(count) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 continue
             try:
                 recv, addr = s.recvfrom(1024)
