@@ -623,8 +623,8 @@ def run():
                 s.sendto(bytes.fromhex(msg[i]), ADDRESS)
             if args.force:
                 if speed > 0:
-                    if number < 100000:
-                        if i != 0 and i % (number // 20) == 0:  # 100000个包以内每发number/20个包调整一次时延，共调整20次。
+                    if number < 100000 and burstSize == 2000:
+                        if i != 0 and i % (number // 20) == 0:  # 100000个包以内,未设定bz则每发number/20个包调整一次时延，共调整20次。
                             sleepTime = (number // 20) / speed - (time.time() - lastCheckTime)
                             if sleepTime > 0:
                                 time.sleep(sleepTime)
