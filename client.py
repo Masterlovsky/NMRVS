@@ -74,7 +74,7 @@ def getparser():
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqt', required=False, action="store_true", default=False,
-                        help="register sequence EID from 0 to set number + NA + TLV('030101')"
+                        help="register sequence EID from 0 to set number + NA + TLV('010101020102')"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqT', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA + Random TLV"
@@ -196,7 +196,7 @@ def getSequenceMsg(num: int, command: str):
             elif command == 'gr':
                 msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
             elif command == 'rt' or command == "registert":
-                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0003030101")
+                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0006010101020102")
             elif command == 'rT' or command == "registerT":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
             else:
