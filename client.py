@@ -74,6 +74,9 @@ def getparser():
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqt', required=False, action="store_true", default=False,
+                        help="register sequence EID from 0 to set number + NA + TLV('030101')"
+                             "Only when there are -n parameters without n=-1 in effect.")
+    parser.add_argument('--seqT', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA + Random TLV"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('-n', '--number', required=False, default=1, type=int,
@@ -193,6 +196,8 @@ def getSequenceMsg(num: int, command: str):
             elif command == 'gr':
                 msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
             elif command == 'rt' or command == "registert":
+                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0003030101")
+            elif command == 'rT' or command == "registerT":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
             else:
                 print("Warning! Don't support this kind of sequence msg.")
@@ -617,6 +622,8 @@ def run():
             msg, p = getSequenceMsg(args.number, command)
         elif (command == 'register' or command == 'r' or command == 'gr') and args.seqt:
             msg, p = getSequenceMsg(args.number, command + "t")
+        elif (command == 'register' or command == 'r' or command == 'gr') and args.seqT:
+            msg, p = getSequenceMsg(args.number, command + "T")
         elif command == "custom":
             msg = args.message
             if msg is None:
