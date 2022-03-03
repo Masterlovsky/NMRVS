@@ -70,8 +70,11 @@ def getparser():
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="EID+CID Batch-deregister from self defined NA,  use: -ecbd <NA>")
-    parser.add_argument('--sequence', required=False, action="store_true", default=False,
+    parser.add_argument('--seq', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
+                             "Only when there are -n parameters without n=-1 in effect.")
+    parser.add_argument('--seqt', required=False, action="store_true", default=False,
+                        help="register sequence EID from 0 to set number + NA + Random TLV"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('-n', '--number', required=False, default=1, type=int,
                         help="Number of packets to send. set n = -1 if number is infinite")
@@ -161,6 +164,21 @@ def getSequenceEID(end: int = 1):
     return eid_list
 
 
+def getRandomTLVStr(tag: str = "03") -> str:
+    """
+    :return: return random tlv(4 byte tlv_len + tlv)
+    """
+    _tag = tag
+    _len = random.randint(1, 5)
+    _val = str(uuid.uuid4())[:_len]
+    if len(_val) % 2 != 0:
+        _val = "0" + _val
+    _lenStr = "0" + str(len(_val) // 2)
+    tlv = _tag + _lenStr + _val
+    tlv_str = "0" * (4 - len(hex(len(tlv))[2:])) + hex(len(tlv))[2:] + tlv
+    return tlv_str
+
+
 def getSequenceMsg(num: int, command: str):
     NA = "99999999999999999999999999999999"
     position = 10  # 标记返回报文成功的标志位的起始位置
@@ -174,6 +192,8 @@ def getSequenceMsg(num: int, command: str):
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
             elif command == 'gr':
                 msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
+            elif command == 'rt' or command == "registert":
+                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
             else:
                 print("Warning! Don't support this kind of sequence msg.")
     return msg, position
@@ -593,8 +613,10 @@ def run():
 
     else:
         # batch register only for eid like: bbb...bb19210
-        if (command == 'register' or command == 'r' or command == 'gr') and args.sequence:
+        if (command == 'register' or command == 'r' or command == 'gr') and args.seq:
             msg, p = getSequenceMsg(args.number, command)
+        elif (command == 'register' or command == 'r' or command == 'gr') and args.seqt:
+            msg, p = getSequenceMsg(args.number, command + "t")
         elif command == "custom":
             msg = args.message
             if msg is None:
@@ -708,4 +730,5 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    # run()
+    print(getRandomTLVStr())

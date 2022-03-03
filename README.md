@@ -138,6 +138,10 @@ $ python3 client.py -i <IP> -p <port> -c <command> -n <number>
 
   **`-ecbd`** : 发送自定义批量注销报文(支持EID+CID版本)，使用：`-ebcd <NA> `
 
+  **`--seq`** : 发送EID从0-n的一系列报文，不带tag，**需要与`-n`参数一起用**，**只在注册时生效**。
+
+  **`--seqt`** : 发送EID从0-n的一系列报文，带随机的TLV，**需要与`-n`参数一起用**，**只在注册时生效**。
+
 ### 6. pktAnalyzer.py
 
 ```shell
