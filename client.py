@@ -175,7 +175,7 @@ def getRandomTLVStr(tag: str = "03") -> str:
         _val = "0" + _val
     _lenStr = "0" + str(len(_val) // 2)
     tlv = _tag + _lenStr + _val
-    tlv_str = "0" * (4 - len(hex(len(tlv))[2:])) + hex(len(tlv))[2:] + tlv
+    tlv_str = "0" * (4 - len(hex(len(tlv) // 2)[2:])) + hex(len(tlv) // 2)[2:] + tlv
     return tlv_str
 
 
