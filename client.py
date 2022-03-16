@@ -73,6 +73,9 @@ def getparser():
     parser.add_argument('--seq', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
+    parser.add_argument('--seqc', required=False, action="store_true", default=False,
+                        help="register sequence CID from 0 to set number + NA"
+                             "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqt', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA + TLV('010101020102')"
                              "Only when there are -n parameters without n=-1 in effect.")
@@ -167,6 +170,19 @@ def getSequenceEID(end: int = 1):
     return eid_list
 
 
+def getSequenceCID(end: int = 1):
+    """
+    :return: return random EID(20 byte hex string, length = 40)
+    """
+    if end == 1:
+        return ["c" * 64]
+    cid_list = []
+    for i in range(end):
+        s = "c" * (64 - len(str(i))) + str(i)
+        cid_list.append(s)
+    return cid_list
+
+
 def getRandomTLVStr(tag: str = "03") -> str:
     """
     :return: return random tlv(4 byte tlv_len + tlv)
@@ -182,25 +198,52 @@ def getRandomTLVStr(tag: str = "03") -> str:
     return tlv_str
 
 
-def getSequenceMsg(num: int, command: str):
+def getSequenceMsg(num: int, command: str, extra_num: int):
+    print("Get Sequence message...")
     NA = "99999999999999999999999999999999"
+    EID = "b" * 40
+    CID = "c" * 64
+    eid_list = []
+    cid_list = []
     position = 10  # 标记返回报文成功的标志位的起始位置
     msg = []
+    extra_cmd = ""
+    if extra_num != 0:
+        extra_cmd = command[-extra_num:]
     if num >= 0:
-        eid_list = getSequenceEID(num)
+        if "e" in extra_cmd:
+            eid_list = getSequenceEID(num)
+        if "c" in extra_cmd:
+            cid_list = getSequenceCID(num)
         for i in range(num):
             timeStamp = getTimeStamp()
             requestID = getRequestID()
-            if command == "r" or command == "register":
+            msg_str = ""
+            if command == "re" or command == "registere":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
-            elif command == 'gr':
-                msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
-            elif command == 'rt' or command == "registert":
+            elif command == 'ret' or command == "registeret":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0006010101020102")
-            elif command == 'rT' or command == "registerT":
+            elif command == 'reT' or command == "registereT":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
+            elif command == 'gre':
+                msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
+            elif command[:-extra_num] == "rcid":
+                eid = EID
+                cid = CID
+                tlv = "0000"
+                if "e" in extra_cmd:
+                    eid = eid_list[i]
+                if "c" in extra_cmd:
+                    cid = cid_list[i]
+                if "t" in extra_cmd:
+                    tlv = "0006010101020102"
+                if "T" in extra_cmd:
+                    tlv = getRandomTLVStr()
+                msg_str = "6f" + requestID + eid + cid + NA + "030100" + timeStamp + tlv
+                msg.append(msg_str)
             else:
                 print("Warning! Don't support this kind of sequence msg.")
+    print("Get Sequence message done!")
     return msg, position
 
 
@@ -618,12 +661,24 @@ def run():
 
     else:
         # batch register only for eid like: bbb...bb19210
-        if (command == 'register' or command == 'r' or command == 'gr') and args.seq:
-            msg, p = getSequenceMsg(args.number, command)
-        elif (command == 'register' or command == 'r' or command == 'gr') and args.seqt:
-            msg, p = getSequenceMsg(args.number, command + "t")
-        elif (command == 'register' or command == 'r' or command == 'gr') and args.seqT:
-            msg, p = getSequenceMsg(args.number, command + "T")
+        extra_cm_num = 0
+        if command in ('r', 'gr', 'register', 'rcid'):
+            if args.seq:
+                command += "e"
+                extra_cm_num += 1
+            if args.seqc:
+                command += "c"
+                extra_cm_num += 1
+            if args.seqt:
+                command += "t"
+                extra_cm_num += 1
+            elif args.seqT:
+                command += "T"
+                extra_cm_num += 1
+            if extra_cm_num == 0:
+                msg, p = getMsg(command, "", number, flag_random_requestID)
+            else:
+                msg, p = getSequenceMsg(args.number, command, extra_cm_num)
         elif command == "custom":
             msg = args.message
             if msg is None:
