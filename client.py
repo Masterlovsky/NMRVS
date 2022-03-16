@@ -77,10 +77,10 @@ def getparser():
                         help="register sequence CID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqt', required=False, action="store_true", default=False,
-                        help="register sequence EID from 0 to set number + NA + TLV('010101020102')"
+                        help="register sequence with fixed TLV('010101020102')"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('--seqT', required=False, action="store_true", default=False,
-                        help="register sequence EID from 0 to set number + NA + Random TLV"
+                        help="register sequence with Random TLV"
                              "Only when there are -n parameters without n=-1 in effect.")
     parser.add_argument('-n', '--number', required=False, default=1, type=int,
                         help="Number of packets to send. set n = -1 if number is infinite")
@@ -221,6 +221,8 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
             msg_str = ""
             if command == "re" or command == "registere":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
+            elif command == "rT" or command == "registerT":
+                msg.append("6f" + requestID + EID + NA + "030100" + timeStamp + getRandomTLVStr())
             elif command == 'ret' or command == "registeret":
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0006010101020102")
             elif command == 'reT' or command == "registereT":
@@ -243,6 +245,7 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
                 msg.append(msg_str)
             else:
                 print("Warning! Don't support this kind of sequence msg.")
+                exit(1)
     print("Get Sequence message done!")
     return msg, position
 
