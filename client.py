@@ -53,7 +53,7 @@ def getparser():
     parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
     parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs=2, metavar=("QueryType", "Content"),
-                        help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip}."
+                        help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip; 5:cid->eid}."
                              " use: -ecq <QueryType> <EID>/<CID>/<Tag>")
     parser.add_argument('-tq', '--TagQuery', required=False, type=str, metavar="TLV(HexStr)",
                         help="resolve self defined Tag, use: -tq <tlv>")
@@ -325,6 +325,8 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
                 tlv_len = hex(int(len(origin_content) / 2))[2:]
                 tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
                 msg = "7100" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
+            elif queryType == "5":
+                msg = "7100" + "05" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
         elif command == "TagQuery" or command == "tq":
             tlv_len = hex(int(len(content) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
@@ -598,6 +600,7 @@ def run():
         content = args.EIDCIDQuery[1]
         if ((queryType == "0" or queryType == "1") and len(content) == EID_STR_LEN) \
                 or (queryType == "2" and len(content) == CID_STR_LEN) \
+                or (queryType == "5" and len(content) == CID_STR_LEN) \
                 or (queryType == "3" and len(content) == EID_CID_STR_LEN) \
                 or (queryType == "4"):
             content = queryType + content
