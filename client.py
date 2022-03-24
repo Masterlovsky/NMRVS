@@ -4,6 +4,7 @@ By mzl 2021.06.09 version 1.0
 Used to send message to NMR nodes
 """
 import argparse
+import sys
 import random
 import socket
 import time
@@ -18,6 +19,41 @@ EID_CID_NA_STR_LEN = 136
 FLAG_ECID_QUERY = 2000
 FLAG_DELAY_MEASURE = 9999
 burst_size = 2000  # 当发包数量大于100000个或发包数量不限时生效，规定burst_size
+
+
+class ShowProcess(object):
+    """
+    显示处理进度的类
+    调用该类相关函数即可实现处理进度的显示
+    """
+
+    # i = 0 # 当前的处理进度
+    # max_steps = 0 # 总共需要处理的次数
+    # max_arrow = 50 #进度条的长度
+
+    # 初始化函数，需要知道总共的处理次数
+    def __init__(self, max_steps):
+        self.max_steps = max_steps  # 总共需要处理的次数
+        self.max_arrow = 50  # 进度条的长度
+        self.i = 0  # 当前的处理进度
+
+    # 显示函数，根据当前的处理进度i显示进度
+    # 效果为[>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>]100.00%
+    def show_process(self, i=None):
+        if i is not None:
+            self.i = i
+        num_arrow = int(self.i * self.max_arrow / self.max_steps)  # 计算显示多少个'>'
+        num_line = self.max_arrow - num_arrow  # 计算显示多少个'-'
+        percent = self.i * 100.0 / self.max_steps  # 计算完成进度，格式为xx.xx%
+        process_bar = '\r' + '[' + '>' * num_arrow + '-' * num_line + ']' + '%.2f' % percent + '%'  # 带输出的字符串，'\r'表示不换行回到最左边
+        sys.stdout.write(process_bar)  # 这两句打印字符到终端
+        sys.stdout.flush()
+        self.i += 1
+
+    def close(self, words='done'):
+        print('')
+        print(words)
+        self.i = 1
 
 
 def getTimeStamp() -> str:
@@ -211,11 +247,13 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
     if extra_num != 0:
         extra_cmd = command[-extra_num:]
     if num >= 0:
+        process_bar = ShowProcess(num - 1)
         if "e" in extra_cmd:
             eid_list = getSequenceEID(num)
         if "c" in extra_cmd:
             cid_list = getSequenceCID(num)
         for i in range(num):
+            process_bar.show_process()
             timeStamp = getTimeStamp()
             requestID = getRequestID()
             msg_str = ""
@@ -246,6 +284,7 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
             else:
                 print("Warning! Don't support this kind of sequence msg.")
                 exit(1)
+        process_bar.close()
     print("Get Sequence message done!")
     return msg, position
 

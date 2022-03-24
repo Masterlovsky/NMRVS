@@ -153,6 +153,10 @@ def run():
             if requestID is not None and requestID in pkt_pair_time_dict.keys():
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
+    if not delay_l:
+        print("Error! delay_l is null, check your pcap file first.")
+        exit(0)
+
     analyzeDelay(delay_l, timeout)
     return delay_l, timeout
 
