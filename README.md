@@ -86,7 +86,7 @@ $ python3 topoShow.py
 # The Simulated client write in Python.
 # Used to send various UDP packets to the parsing node to verify the SEANet Resolution System.
 
-# 执行以下命令：
+# Run the following command：
 
 $ python3 client.py -i <IP> -p <port> <...args...>
 ``` 
@@ -97,7 +97,7 @@ $ python3 client.py -i <IP> -p <port> <...args...>
 
   **`-i`** : Destination IP address to be sent. (support IPv4 and IPv6) **(mandatory)**
 
-  **`-p`** : Destination port number，default is*10061*，this is the *Level1* listening port of ResNode **(必须参数)**
+  **`-p`** : Destination port number，default is*10061*，this is the *Level1* listening port of ResNode **(mandatory)**
 
   **`-c`** : Convenient operation instruction which includes：
 
