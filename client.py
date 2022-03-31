@@ -577,10 +577,13 @@ def show_details_ecid(receive_message: str):
         return
     status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
     content_len_dict = {"00": EID_NA_STR_LEN, "01": EID_CID_STR_LEN, "02": CID_NA_STR_LEN, "03": EID_CID_NA_STR_LEN,
-                        "04": EID_CID_NA_STR_LEN}
+                        "04": EID_CID_NA_STR_LEN, "05": EID_CID_STR_LEN}
     status = status_dict[receive_message[2:4]]
     queryType = receive_message[4:6]
-    content_length = content_len_dict[queryType]
+    try:
+        content_length = content_len_dict[queryType]
+    except KeyError:
+        print("ERROR! Unknown queryType")
     request_id = receive_message[10:18]
     time_stamp = receive_message[18:26]
     num = int(receive_message[26:30], 16)
@@ -611,6 +614,11 @@ def show_details_ecid(receive_message: str):
                                                          receive_message[
                                                          index + EID_CID_STR_LEN:index + EID_CID_NA_STR_LEN]))
             index += EID_CID_NA_STR_LEN
+    elif queryType == "05":
+        for i in range(num):
+            print("[{}] CID: {}, EID: {}".format(i, receive_message[index:index + CID_STR_LEN],
+                                                 receive_message[index + CID_STR_LEN:index + EID_CID_STR_LEN]))
+            index += EID_CID_STR_LEN
 
 
 def run():
