@@ -616,8 +616,8 @@ def show_details_ecid(receive_message: str):
             index += EID_CID_NA_STR_LEN
     elif queryType == "05":
         for i in range(num):
-            print("[{}] CID: {}, EID: {}".format(i, receive_message[index:index + CID_STR_LEN],
-                                                 receive_message[index + CID_STR_LEN:index + EID_CID_STR_LEN]))
+            print("[{}] CID: {}, EID: {}".format(i, receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN],
+                                                 receive_message[index:index + EID_STR_LEN]))
             index += EID_CID_STR_LEN
 
 
