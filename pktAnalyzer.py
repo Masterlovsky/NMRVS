@@ -19,6 +19,9 @@ def drawPicture(delay_l: list, time_out: float):
     :param delay_l: 单位：ms
     :param time_out: 单位：ms
     """
+    if len(delay_l) == 1:
+        print("Only one packet pair, skip drawing Picture process.")
+        return
     unit = 1000  # use unit ms or us in the line chart (1000：us; 1: ms)
     if max(delay_l) > 10:
         unit = 1
@@ -114,7 +117,7 @@ def getRequestIDFromPacket(pkt_item):
 
 def getRequestID(payload: str):
     if payload[:2] in ("71", "72", "0d", "0e"):
-        return payload[8:16]
+        return payload[8 + CID_OFFSET:16 + CID_OFFSET]
     elif payload[:2] in ("6f", "70", "73", "74", "0b", "0c", "0f", "10"):
         return payload[2:10]
     else:
@@ -162,9 +165,12 @@ def run():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 2:
-        print("use this script: python3 pktAnalyzer.py <test.pcap>")
+    CID_OFFSET = 2
+    if not (len(sys.argv) == 2 or (len(sys.argv) == 3 and sys.argv[2] == "e")):
+        print("use this script: python3 pktAnalyzer.py <test.pcap> or python3 pktAnalyzer.py <test.pcap> e")
         exit(0)
+    if len(sys.argv) == 3:
+        CID_OFFSET = 0
     yml = readConf2Yml("conf.yml")
     timeout = yml["TIME_OUT"]
     xtick_num = yml["DRAW"]["XTICK_NUM"]
