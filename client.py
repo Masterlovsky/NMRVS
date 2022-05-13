@@ -931,6 +931,8 @@ def run():
                     isSuccess = "success"
                 elif p == FLAG_ECID_QUERY:
                     isSuccess = "success" if recv.hex()[2:4] == "01" else "failed"
+                elif p == FLAG_CUCKOO_QUERY:
+                    isSuccess = "success" if recv.hex()[10:12] == "01" else "failed"
                 else:
                     isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
                 if p == FLAG_DELAY_MEASURE:
