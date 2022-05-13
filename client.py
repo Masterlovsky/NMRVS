@@ -17,6 +17,7 @@ EID_NA_STR_LEN = 72
 EID_CID_STR_LEN = 104
 EID_CID_NA_STR_LEN = 136
 FLAG_ECID_QUERY = 2000
+FLAG_CUCKOO_QUERY = 3000
 FLAG_DELAY_MEASURE = 9999
 burst_size = 2000  # 当发包数量大于100000个或发包数量不限时生效，规定burst_size
 
@@ -68,7 +69,7 @@ def getparser():
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
     parser.add_argument('-c', '--command', type=str, default="custom",
                         choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl', 'rcid', 'ecid', 'dcid',
-                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd'],
+                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd', 'rcc', 'dcc', 'qcc'],
                         help="Input what kind of message to send,           "
                              "'r' -> register;                              "
                              "'d' -> deregister;                            "
@@ -81,6 +82,9 @@ def getparser():
                              "'gd' -> global-deregister;                    "
                              "'gbd' -> global-batchDeregister;              "
                              "'ge' -> global-resolve; eid global resolve simple; "
+                             "'rcc' -> register for cuckoo filter version   "
+                             "'dcc' -> deregister for cuckoo filter version "
+                             "'qcc' -> eid query for cuckoo filter version  "
                              "'tlv' -> tlv resolve, use EID: 000...00;      "
                              "'rnl' -> get rnl response from resolve node;  "
                              "'agent' -> get rnl response from server-agent;"
@@ -106,6 +110,12 @@ def getparser():
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="EID+CID Batch-deregister from self defined NA,  use: -ecbd <NA>")
+    parser.add_argument('-ccr', '--CuckooRegister', required=False, type=str, metavar="EID+NA",
+                        help="CuckooRegister from self defined EID and NA,  use: -ccr <EIDNA>")
+    parser.add_argument('-ccd', '--CuckooDeregister', required=False, type=str, metavar="EID+NA",
+                        help="CuckooDeregister from self defined EID and NA,  use: -ccd <EIDNA>")
+    parser.add_argument('-ccq', '--CuckooQuery', required=False, type=str, metavar="EID",
+                        help="CuckooQuery from self defined EID,  use: -ccq <EID>")
     parser.add_argument('--seq', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
@@ -124,8 +134,10 @@ def getparser():
                         help="packets sending speed(pps). Only when there are --force parameters in effect")
     parser.add_argument('--force', required=False, action="store_true", default=False,
                         help="force send message without waiting response, use to increase PPS")
-    parser.add_argument('--random', required=False, action="store_true", default=False,
+    parser.add_argument('--ranReqID', required=False, action="store_true", default=False,
                         help="Use random requestID when sending multiple message")
+    parser.add_argument('--ranAll', required=False, action="store_true", default=False,
+                        help="Use random possible fields(EID, CID, NA, ReqID, TLV, ...) when sending multiple message")
     parser.add_argument('-m', '--message', required=False, type=str, metavar="custom message",
                         help="custom packet payload, use as -c custom -m 6f1112121232...")
     parser.add_argument('-d', '--detail', required=False, action="store_true", default=False,
@@ -182,15 +194,36 @@ def getRequestID() -> str:
     return str(uuid.uuid4())[:8]
 
 
+def getRandomHexStr(length: int) -> str:
+    """
+    :return: return random hexString without "0x"
+    """
+    s = ""
+    for i in range(length):
+        num_hex = hex(random.randint(0, 15))
+        s = s + num_hex[2:]
+    return s
+
+
 def getRandomEID() -> str:
     """
     :return: return random EID(20 byte hex string, length = 40)
     """
-    s = ""
-    for i in range(40):
-        num_hex = hex(random.randint(0, 15))
-        s = s + num_hex[2:]
-    return s
+    return getRandomHexStr(40)
+
+
+def getRandomCID() -> str:
+    """
+    :return: return random CID(32 byte hex string, length = 64)
+    """
+    return getRandomHexStr(64)
+
+
+def getRandomNA() -> str:
+    """
+    :return: return random NA(16 byte hex string, length = 32)
+    """
+    return getRandomHexStr(32)
 
 
 def getSequenceEID(end: int = 1):
@@ -234,6 +267,49 @@ def getRandomTLVStr(tag: str = "03") -> str:
     return tlv_str
 
 
+def getRandomAllMsg(num: int, command: str):
+    print("Get RandomALL message...")
+    position = 10  # 标记返回报文成功的标志位的起始位置
+    msg = []
+    if num >= 0:
+        process_bar = ShowProcess(num - 1)
+        for i in range(num):
+            process_bar.show_process()
+            timeStamp = getTimeStamp()
+            requestID = getRequestID()
+            EID = getRandomEID()
+            NA = getRandomNA()
+            TAG = getRandomTLVStr()
+            CID = getRandomCID()
+            mType = ""
+            if command == "rcc":
+                mType = "6f"
+                msg.append(mType + requestID + EID + NA + timeStamp)
+            elif command == "dcc":
+                mType = "73"
+                msg.append(mType + requestID + EID + NA + timeStamp)
+            elif command == "qcc":
+                mType = "71"
+                msg.append(mType + requestID + EID + timeStamp)
+            elif command == "r":
+                msg.append("6f" + requestID + EID + NA + "030100" + timeStamp + TAG)
+            elif command == "rcid":
+                msg.append("6f" + requestID + EID + CID + NA + "030100" + timeStamp + TAG)
+            elif command == "d":
+                msg.append("73" + requestID + "00" + EID + NA + timeStamp)
+            elif command == "dcid":
+                msg.append("73" + requestID + "00" + EID + CID + NA + timeStamp)
+            elif command == "eid":
+                msg.append("71" + "000000" + requestID + EID + timeStamp)
+            # todo: 暂时不支持 ecid 全随机
+            else:
+                print("getRandomAllMsg() value error!")
+                return
+        process_bar.close()
+    print("Get getRandomAll message done!")
+    return msg, position
+
+
 def getSequenceMsg(num: int, command: str, extra_num: int):
     print("Get Sequence message...")
     NA = "99999999999999999999999999999999"
@@ -267,6 +343,8 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
                 msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
             elif command == 'gre':
                 msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
+            elif command == 'rcce':
+                msg.append("6f" + requestID + eid_list[i] + "1" * 32 + timeStamp)
             elif command[:-extra_num] == "rcid":
                 eid = EID
                 cid = CID
@@ -315,7 +393,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
         elif command == "resolve" or command == "e" or command == "eid":
             position = 2
-            msg = "71000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+            msg = "71" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
 
         elif command == "register_cid" or command == "rcid":
             position = 10
@@ -347,6 +425,15 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
         elif command == "globalBatchDeregister" or command == "gbd":
             position = 10
             msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+        elif command == "rcc":
+            position = 10
+            msg = "6f" + requestID + "b" * EID_STR_LEN + "1" * 32 + timeStamp
+        elif command == "dcc":
+            position = 10
+            msg = "73" + requestID + "b" * EID_STR_LEN + "1" * 32 + timeStamp
+        elif command == "qcc":
+            position = FLAG_CUCKOO_QUERY
+            msg = "71" + requestID + "b" * EID_STR_LEN + timeStamp
         elif command == "EIDQuery" or command == "eq":
             position = 2
             msg = "71000000" + requestID + content + timeStamp
@@ -371,6 +458,15 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 2
             msg = "7100" + tlv_len_str + requestID + "0" * 40 + timeStamp + content
+        elif command == "CuckooRegister" or command == "ccr":
+            position = 10
+            msg = "6f" + requestID + content + timeStamp
+        elif command == "CuckooDeregister" or command == "ccd":
+            position = 10
+            msg = "73" + requestID + content + timeStamp
+        elif command == "CuckooQuery" or command == "ccq":
+            position = 10
+            msg = "71" + requestID + content + timeStamp
         elif command == "EIDRegister" or command == "er":
             eid_na = content[:72]
             tlv = content[72:]
@@ -621,6 +717,25 @@ def show_details_ecid(receive_message: str):
             index += EID_CID_STR_LEN
 
 
+def show_details_cc_query(receive_message: str):
+    # 解析响应报文
+    if receive_message[:2] == "72":
+        request_id = receive_message[2:10]
+        status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
+        status = status_dict[receive_message[10:12]]
+        time_stamp = receive_message[12:20]
+        num = int(receive_message[20:22], 16)
+        index = 22
+        print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timestamp]: {}".format(request_id,
+                                                                                                          status,
+                                                                                                          time_stamp))
+        print("[resolving_entry_number]: {}".format(num))
+        for i in range(num):
+            print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + 40],
+                                                receive_message[index + 40:index + 72]))
+            index += 72
+
+
 def run():
     parser = getparser()
     args = parser.parse_args()
@@ -633,7 +748,7 @@ def run():
     number = args.number
     speed = args.speed
     burstSize = args.burstSize
-    flag_random_requestID = args.random
+    flag_random_requestID = args.ranReqID
 
     if args.EIDQuery is not None:
         EID = args.EIDQuery
@@ -712,10 +827,33 @@ def run():
             return
         msg, p = getMsg("EIDCIDBatchDeregister", NA)
 
+    elif args.CuckooRegister is not None:
+        EIDNA = args.CuckooRegister
+        if len(EIDNA) != EID_NA_STR_LEN:
+            print("EID+NA length error!")
+            return
+        msg, p = getMsg("CuckooRegister", EIDNA, number, flag_random_requestID)
+
+    elif args.CuckooDeregister is not None:
+        EIDNA = args.CuckooDeregister
+        if len(EIDNA) != EID_NA_STR_LEN:
+            print("EID+NA length error!")
+            return
+        msg, p = getMsg("CuckooDeregister", EIDNA, number, flag_random_requestID)
+
+    elif args.CuckooQuery is not None:
+        EID = args.CuckooQuery
+        if len(EID) != EID_STR_LEN:
+            print("EID length error!")
+            return
+        msg, p = getMsg("CuckooQuery", EID, number, flag_random_requestID)
+
     else:
         # batch register only for eid like: bbb...bb19210
         extra_cm_num = 0
-        if command in ('r', 'gr', 'register', 'rcid'):
+        if args.ranAll:
+            msg, p = getRandomAllMsg(number, command)
+        elif command in ('r', 'gr', 'register', 'rcid', 'rcc'):
             if args.seq:
                 command += "e"
                 extra_cm_num += 1
@@ -802,6 +940,8 @@ def run():
                     if args.detail:
                         if p == FLAG_ECID_QUERY:
                             show_details_ecid(recv.hex())
+                        elif p == FLAG_CUCKOO_QUERY:
+                            show_details_cc_query(recv.hex())
                         else:
                             show_details(recv.hex())
             except socket.timeout:
