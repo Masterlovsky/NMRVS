@@ -9,6 +9,7 @@ import random
 import socket
 import time
 import uuid
+from ctypes import *
 
 EID_STR_LEN = 40
 CID_STR_LEN = 64
@@ -55,6 +56,16 @@ class ShowProcess(object):
         print('')
         print(words)
         self.i = 1
+
+
+class SEAHash(object):
+    def __init__(self, c_lib_path) -> None:
+        self.lib_eid = CDLL(c_lib_path)
+
+    def get_SEA_Hash_EID(self, uri: str) -> str:
+        self.lib_eid.calculate_eid.restype = c_char_p
+        l = self.lib_eid.calculate_eid(uri)
+        return bytes.hex(l)
 
 
 def getTimeStamp() -> str:
