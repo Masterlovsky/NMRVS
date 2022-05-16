@@ -63,10 +63,12 @@ class SEAHash(object):
         self.lib_eid = CDLL(c_lib_path)
 
     def get_SEA_Hash_EID(self, uri: str) -> str:
-        self.lib_eid.calculate_eid.restype = c_char_p
-        l = self.lib_eid.calculate_eid(uri)
-        return bytes.hex(l)
-
+        self.lib_eid.calculate_eid.argtypes = [c_char_p, c_char_p]
+        l = create_string_buffer(20)
+        self.lib_eid.calculate_eid(l, c_char_p(uri.encode("UTF-8")))
+        s = "".join([bytes.hex(i) for i in l])
+        return s
+        
 
 def ip2NAStr(ip: str) -> str:
     # 处理IP地址，将IPv6和IPv4分开讨论, 如果已经是NA_STR则直接返回
