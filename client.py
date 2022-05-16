@@ -59,7 +59,7 @@ class ShowProcess(object):
 
 
 class SEAHash(object):
-    def __init__(self, c_lib_path = "./lib/lib_sea_eid.so") -> None:
+    def __init__(self, c_lib_path="./lib/lib_sea_eid.so") -> None:
         self.lib_eid = CDLL(c_lib_path)
 
     def get_SEA_Hash_EID(self, uri: str) -> str:
@@ -512,7 +512,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             position = 10
             msg = "73" + requestID + content + timeStamp
         elif command == "CuckooQuery" or command == "ccq":
-            position = 10
+            position = FLAG_CUCKOO_QUERY
             msg = "71" + requestID + content + timeStamp
         elif command == "EIDRegister" or command == "er":
             eid_na = content[:72]
