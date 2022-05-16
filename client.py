@@ -59,13 +59,45 @@ class ShowProcess(object):
 
 
 class SEAHash(object):
-    def __init__(self, c_lib_path) -> None:
+    def __init__(self, c_lib_path = "./lib/lib_sea_eid.so") -> None:
         self.lib_eid = CDLL(c_lib_path)
 
     def get_SEA_Hash_EID(self, uri: str) -> str:
         self.lib_eid.calculate_eid.restype = c_char_p
         l = self.lib_eid.calculate_eid(uri)
         return bytes.hex(l)
+
+
+def ip2NAStr(ip: str) -> str:
+    # 处理IP地址，将IPv6和IPv4分开讨论, 如果已经是NA_STR则直接返回
+    result = ""
+    if ip == "":
+        return result
+    if ":" in ip:
+        keylen = len(ip.split(":"))
+        if keylen > 8:
+            print("IP addr input error!")
+            return ""
+        elif keylen < 8:
+            index = ip.find("::")
+            ip = ip[0:index + 1] + "0:" * (8 - keylen + 1) + ip[index + 2:]
+        NA_list = ip.split(":")
+        for i in NA_list:
+            if len(i) < 4:
+                result += '0' * (4 - len(i)) + i
+            else:
+                result += i
+    elif "." in ip:
+        nodeNA_list = ip.split(".")
+        for i in nodeNA_list:
+            if len(i) < 4:
+                result += '0' * (4 - len(i)) + i
+            else:
+                result += i
+        result = "0" * 16 + result
+    else:
+        result = ip
+    return result
 
 
 def getTimeStamp() -> str:
@@ -121,12 +153,12 @@ def getparser():
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="EID+CID Batch-deregister from self defined NA,  use: -ecbd <NA>")
-    parser.add_argument('-ccr', '--CuckooRegister', required=False, type=str, metavar="EID+NA",
-                        help="CuckooRegister from self defined EID and NA,  use: -ccr <EIDNA>")
-    parser.add_argument('-ccd', '--CuckooDeregister', required=False, type=str, metavar="EID+NA",
-                        help="CuckooDeregister from self defined EID and NA,  use: -ccd <EIDNA>")
-    parser.add_argument('-ccq', '--CuckooQuery', required=False, type=str, metavar="EID",
-                        help="CuckooQuery from self defined EID,  use: -ccq <EID>")
+    parser.add_argument('-ccr', '--CuckooRegister', required=False, type=str, nargs=2, metavar="URI IP",
+                        help="CuckooRegister from self defined EID and NA,  use: -ccr <uri ip>")
+    parser.add_argument('-ccd', '--CuckooDeregister', required=False, type=str, nargs=2, metavar="URI IP",
+                        help="CuckooDeregister from self defined EID and NA,  use: -ccd <uri ip>")
+    parser.add_argument('-ccq', '--CuckooQuery', required=False, type=str, metavar="URI",
+                        help="CuckooQuery from self defined EID,  use: -ccq <uri>")
     parser.add_argument('--seq', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
@@ -156,6 +188,8 @@ def getparser():
     parser.add_argument('-b', '--burstSize', required=False, type=int, default=2000,
                         help="The number of concurrent packets. Delay adjustment is triggered after each concurrent burst_size of packets. "
                              "(Only has effect when use '-n -1' or '-n 100000+')")
+    parser.add_argument('-uh', '--uriHash', required=False, type=str, metavar="SEAHash",
+                        help="calculate SEAHash of custom defined URI to EID")
     return parser
 
 
@@ -512,7 +546,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "1d" + requestID + timeStamp
         elif command == "dm" or command == "delay-measure":
             msg = "03" + timeStamp
-            position = FLAG_DELAY_MEASURE  # 选一个比较大的数当做标识
+            position = FLAG_DELAY_MEASURE
         else:
             # todo : 批量随机注册实现？
             msg = ""
@@ -760,8 +794,14 @@ def run():
     speed = args.speed
     burstSize = args.burstSize
     flag_random_requestID = args.ranReqID
+    seahash = SEAHash()
 
-    if args.EIDQuery is not None:
+    if args.uriHash is not None:
+        eid = seahash.get_SEA_Hash_EID(args.uriHash)
+        print('[SEAHash] uri: "{}", EID: {}'.format(args.uriHash, eid))
+        return
+
+    elif args.EIDQuery is not None:
         EID = args.EIDQuery
         if len(EID) != EID_STR_LEN:
             print("EID length error!")
@@ -839,21 +879,26 @@ def run():
         msg, p = getMsg("EIDCIDBatchDeregister", NA)
 
     elif args.CuckooRegister is not None:
-        EIDNA = args.CuckooRegister
+        uri = args.CuckooRegister[0]
+        ip = args.CuckooRegister[1]
+        EIDNA = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
         msg, p = getMsg("CuckooRegister", EIDNA, number, flag_random_requestID)
 
     elif args.CuckooDeregister is not None:
-        EIDNA = args.CuckooDeregister
+        uri = args.CuckooDeregister[0]
+        ip = args.CuckooDeregister[1]
+        EIDNA = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
         if len(EIDNA) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
         msg, p = getMsg("CuckooDeregister", EIDNA, number, flag_random_requestID)
 
     elif args.CuckooQuery is not None:
-        EID = args.CuckooQuery
+        uri = args.CuckooQuery
+        EID = seahash.get_SEA_Hash_EID(uri)
         if len(EID) != EID_STR_LEN:
             print("EID length error!")
             return
