@@ -103,12 +103,15 @@ $ python3 client.py -i <IP> -p <port> <...args...>
 
        register msg: 'r'
        register msg cid version: 'rcid'
+       register msg cuckoo-filter version: 'rcc'
        deregister msg: 'd' 
        deregister msg cid version: 'dcid' 
+       deregister msg cuckoo-filter version: 'dcc' 
        batch deregister: 'bd'
-       eid resolve msg: 'eid', (default eid: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-       eid resolve msg cid version: 'ecid', (default eid: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
-       tlv resolve msg: 'tlv', (default eid: "0000000000000000000000000000000000000000", default tlv: "010101020102")
+       resolve msg: 'eid', (default eid: "b"*40)
+       resolve msg cid version: 'ecid', (default cid: "c"*64)
+       resolve msg cuckoo-filter version: 'qcc', (default eid: "b"*40)
+       tlv resolve msg: 'tlv', (default eid: "0"*40, default tlv: "010101020102")
        rnl request： 'rnl', to get RNL from a ResNode
        connect to agent: 'agent', Connect to the access agent to get RNL and other information.
        delay measure msg： 'dm', Tests the delay from the client to the resolution node
@@ -141,7 +144,13 @@ $ python3 client.py -i <IP> -p <port> <...args...>
   **`-ebd`** : Send the user-defined EID batch deregister packet, example: `-ebd <NA> `
 
   **`-ecbd`** : Send the user-defined EID+CID batch deregister packet, example:`-ebcd <NA> `
-
+  
+  **`-ccr`** : Send the user-defined CuckooRegister from self defined URI and NA,  use: `-ccr <uri ip> `
+  
+  **`-ccd`** : Send the user-defined CuckooDeregister from self defined URI and NA,  use: `-ccd <uri ip> `
+  
+  **`-ccq`** : Send the user-defined CuckooQuery from self defined URI,  use: `-ccq <uri> `
+  
   **`--seq`** : Send a series of packets with EID from 0 to n. **need to use with`-n`parameter**，**only has effect in register**.
 
   **`--seqc`** : Send a series of packets with CID from 0 to n. **need to use with `-n`parameter**，**only has effect in register**，Can be used with --seq.
@@ -150,6 +159,12 @@ $ python3 client.py -i <IP> -p <port> <...args...>
 
   **`--seqt`** : Send a series of packets with fixed TAG.(010101020102)， **need to use with `-n`parameter**，**only has effect in register**，
 
+  **`--ranReqID`** : Use random request ID.
+
+  **`--ranAll`** : Use random possible fields(EID, CID, NA, ReqID, TLV, ...) when sending multiple message.
+  
+  **`-uh`** : Calculate SEAHash of custom defined URI to EID. Not sending messages.
+
 ### 6. pktAnalyzer.py
 
 ```shell
@@ -157,7 +172,9 @@ $ python3 client.py -i <IP> -p <port> <...args...>
 
 # Run the following command：
 
-$ python3 pktAnalyzer.py test.pcap
+$ python3 pktAnalyzer.py test.pcap <e/cc>
 ``` 
-
+- e: EID mode
+- cc: CuckooFilter mode
+- default(without param 2): CID mode
 - The time delay trend reference chart can be viewed in the generated 'len_delay.html' and the number of horizontal marks can be modified in the **'conf.yml'** configuration file

@@ -156,11 +156,11 @@ def getparser():
     parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="EID+CID Batch-deregister from self defined NA,  use: -ecbd <NA>")
     parser.add_argument('-ccr', '--CuckooRegister', required=False, type=str, nargs=2, metavar="URI IP",
-                        help="CuckooRegister from self defined EID and NA,  use: -ccr <uri ip>")
+                        help="CuckooRegister from self defined URI and NA,  use: -ccr <uri ip>")
     parser.add_argument('-ccd', '--CuckooDeregister', required=False, type=str, nargs=2, metavar="URI IP",
-                        help="CuckooDeregister from self defined EID and NA,  use: -ccd <uri ip>")
+                        help="CuckooDeregister from self defined URI and NA,  use: -ccd <uri ip>")
     parser.add_argument('-ccq', '--CuckooQuery', required=False, type=str, metavar="URI",
-                        help="CuckooQuery from self defined EID,  use: -ccq <uri>")
+                        help="CuckooQuery from self defined URI,  use: -ccq <uri>")
     parser.add_argument('--seq', required=False, action="store_true", default=False,
                         help="register sequence EID from 0 to set number + NA"
                              "Only when there are -n parameters without n=-1 in effect.")
@@ -328,16 +328,12 @@ def getRandomAllMsg(num: int, command: str):
             NA = getRandomNA()
             TAG = getRandomTLVStr()
             CID = getRandomCID()
-            mType = ""
             if command == "rcc":
-                mType = "6f"
-                msg.append(mType + requestID + EID + NA + timeStamp)
+                msg.append("6f" + requestID + EID + NA + timeStamp)
             elif command == "dcc":
-                mType = "73"
-                msg.append(mType + requestID + EID + NA + timeStamp)
+                msg.append("73" + requestID + EID + NA + timeStamp)
             elif command == "qcc":
-                mType = "71"
-                msg.append(mType + requestID + EID + timeStamp)
+                msg.append("71" + requestID + EID + timeStamp)
             elif command == "r":
                 msg.append("6f" + requestID + EID + NA + "030100" + timeStamp + TAG)
             elif command == "rcid":

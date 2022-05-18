@@ -117,7 +117,7 @@ def getRequestIDFromPacket(pkt_item):
 
 def getRequestID(payload: str):
     if payload[:2] in ("71", "72", "0d", "0e"):
-        return payload[8 + CID_OFFSET:16 + CID_OFFSET]
+        return payload[8 + OFFSET:16 + OFFSET]
     elif payload[:2] in ("6f", "70", "73", "74", "0b", "0c", "0f", "10"):
         return payload[2:10]
     else:
@@ -151,6 +151,8 @@ def run():
         if pkt_type in ("6f", "71", "73", "0d", "0b", "0f"):
             if requestID is not None:
                 pkt_pair_time_dict[requestID].put(pkt.time)
+            else:
+                print("ERR, requestID is None!")
         # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
         if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
             if requestID is not None and requestID in pkt_pair_time_dict.keys():
@@ -164,13 +166,24 @@ def run():
     return delay_l, timeout
 
 
-if __name__ == '__main__':
-    CID_OFFSET = 2
-    if not (len(sys.argv) == 2 or (len(sys.argv) == 3 and sys.argv[2] == "e")):
-        print("use this script: python3 pktAnalyzer.py <test.pcap> or python3 pktAnalyzer.py <test.pcap> e")
+def argsCheck():
+    offset = 2
+    if len(sys.argv) < 2 or len(sys.argv) > 3:
+        print("use this script: python3 pktAnalyzer.py <test.pcap> or python3 pktAnalyzer.py <test.pcap> e/cc")
         exit(0)
     if len(sys.argv) == 3:
-        CID_OFFSET = 0
+        if sys.argv[2] == "e":  # EID version
+            offset = 0
+        elif sys.argv[2] == "cc":  # cuckooFilter version
+            offset = -6
+        else:
+            print("use this script: python3 pktAnalyzer.py <test.pcap> or python3 pktAnalyzer.py <test.pcap> e/cc")
+            exit(0)
+    return offset
+
+
+if __name__ == '__main__':
+    OFFSET = argsCheck()
     yml = readConf2Yml("conf.yml")
     timeout = yml["TIME_OUT"]
     xtick_num = yml["DRAW"]["XTICK_NUM"]
