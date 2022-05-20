@@ -150,14 +150,14 @@ def getRequestID(payload: str):
         return None
 
 
-def analyzeDelay(delay_list: list, time_out: float):
-    n = len(delay_list)
-    max_delay = max(delay_list)
-    min_delay = min(delay_list)
+def analyzeDelay(_delay_list: list, time_out: float):
+    n = len(_delay_list)
+    max_delay = max(_delay_list)
+    min_delay = min(_delay_list)
     total = 0.0
     timeout_n = 0
     pbar = ShowProcess(n - 1, "pcap analyzing")
-    for dl in delay_list:
+    for dl in _delay_list:
         pbar.show_process()
         total += dl
         if dl > time_out:
@@ -169,33 +169,31 @@ def analyzeDelay(delay_list: list, time_out: float):
     return average_delay
 
 
+def analyzeDelayInfo(pkt: Packet):
+    global processed_pkt_num
+    processed_pkt_num += 1
+    if processed_pkt_num % 5000 == 0:
+        print("Already read {} packets...".format(processed_pkt_num))
+    pkt_type = getPacketTypeFromPacket(pkt)
+    requestID = getRequestIDFromPacket(pkt)
+    if pkt_type is None or requestID is None:
+        print("Warning, not a IRS standard packet, Pkt INFO: {}".format(pkt.summary()))
+        return
+    if pkt_type in ("6f", "71", "73", "0d", "0b", "0f"):
+        pkt_pair_time_dict[requestID].put(pkt.time)
+    # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
+    if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
+        if requestID in pkt_pair_time_dict.keys():
+            delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
+            delay_list.append(delay)
+
+
 def run():
-    packets = rdpcap(sys.argv[1])
-    pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
-    delay_l = []  # store each delay value of packet-pair
-    process_bar = ShowProcess(len(packets) - 1)
-    for pkt in packets:
-        pkt_type = getPacketTypeFromPacket(pkt)
-        requestID = getRequestIDFromPacket(pkt)
-        # If it is a request packet, put requestID and corresponding timestamp into the dictionary
-        if pkt_type in ("6f", "71", "73", "0d", "0b", "0f"):
-            if requestID is not None:
-                pkt_pair_time_dict[requestID].put(pkt.time)
-            else:
-                print("ERR, requestID is None!")
-        # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
-        if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
-            if requestID is not None and requestID in pkt_pair_time_dict.keys():
-                delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
-                delay_l.append(delay)
-        process_bar.show_process()
-    process_bar.close()
-    if not delay_l:
+    sniff(offline=sys.argv[1], prn=analyzeDelayInfo, store=0)
+    if not delay_list:
         print("Error! delay_l is null, check your pcap file first.")
         exit(0)
-
-    analyzeDelay(delay_l, timeout)
-    return delay_l, timeout
+    analyzeDelay(delay_list, timeout)
 
 
 def argsCheck():
@@ -219,5 +217,8 @@ if __name__ == '__main__':
     yml = readConf2Yml("conf.yml")
     timeout = yml["TIME_OUT"]
     xtick_num = yml["DRAW"]["XTICK_NUM"]
-    _delay_list, _time_out = run()
-    drawPicture(_delay_list, _time_out)
+    delay_list = []
+    pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
+    processed_pkt_num = 0
+    run()
+    drawPicture(delay_list, timeout)
