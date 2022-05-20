@@ -574,7 +574,7 @@ def show_details(receive_message: str):
                        "04": "storage_is_full", "05": "other_errors"}
         status = status_dict[receive_message[10:12]]
         time_stamp = receive_message[12:20]
-        print("=== response details ===:\n[request_id]: {}, [register status]: {}, [timestamp]: {}".format(request_id,
+        print("=== response details ===:\n[request_id]: {}, [deregister status]: {}, [timestamp]: {}".format(request_id,
                                                                                                            status,
                                                                                                            time_stamp))
     # 解析响应报文
