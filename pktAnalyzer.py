@@ -13,6 +13,32 @@ from pyecharts.globals import ThemeType
 from scapy.all import *
 
 
+class ShowProcess(object):
+
+    def __init__(self, max_steps, process_name="read pcap-file"):
+        self.max_steps = max_steps  # Total number of times you need to process
+        self.max_arrow = 50  # Length of the progress bar
+        self.i = 0  # Current processing progress
+        print(process_name + " start: ")
+
+    # Effect is [>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>]100.00%
+    def show_process(self, i=None):
+        if i is not None:
+            self.i = i
+        num_arrow = int(self.i * self.max_arrow / self.max_steps)
+        num_line = self.max_arrow - num_arrow
+        percent = self.i * 100.0 / self.max_steps
+        process_bar = '\r' + '[' + '>' * num_arrow + '-' * num_line + ']' + '%.2f' % percent + '%'
+        sys.stdout.write(process_bar)
+        sys.stdout.flush()
+        self.i += 1
+
+    def close(self, words='done'):
+        print('')
+        print(words)
+        self.i = 1
+
+
 def drawPicture(delay_l: list, time_out: float):
     """
     draw a picture use packet delay list and timeout.
@@ -130,10 +156,13 @@ def analyzeDelay(delay_list: list, time_out: float):
     min_delay = min(delay_list)
     total = 0.0
     timeout_n = 0
+    pbar = ShowProcess(n - 1, "pcap analyzing")
     for dl in delay_list:
+        pbar.show_process()
         total += dl
         if dl > time_out:
             timeout_n += 1
+    pbar.close()
     average_delay = total / n
     print("packet-pair number: {}, min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
           .format(n, min_delay, max_delay, average_delay, timeout_n))
@@ -144,6 +173,7 @@ def run():
     packets = rdpcap(sys.argv[1])
     pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
     delay_l = []  # store each delay value of packet-pair
+    process_bar = ShowProcess(len(packets) - 1)
     for pkt in packets:
         pkt_type = getPacketTypeFromPacket(pkt)
         requestID = getRequestIDFromPacket(pkt)
@@ -158,6 +188,8 @@ def run():
             if requestID is not None and requestID in pkt_pair_time_dict.keys():
                 delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
                 delay_l.append(delay)
+        process_bar.show_process()
+    process_bar.close()
     if not delay_l:
         print("Error! delay_l is null, check your pcap file first.")
         exit(0)
