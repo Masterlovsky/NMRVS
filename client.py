@@ -1,7 +1,8 @@
 #! /usr/bin/python3
 """
-By mzl 2021.06.09 version 1.0
+BY Masterlovsky 2021.06.09 version 1.0
 Used to send message to NMR nodes
+Update 2022.6.9 version 2.0
 """
 import argparse
 import sys
@@ -11,7 +12,9 @@ import time
 import uuid
 from ctypes import *
 
+VERSION = "2.0"
 EID_STR_LEN = 40
+NA_STR_LEN = 32
 CID_STR_LEN = 64
 CID_NA_STR_LEN = 96
 EID_NA_STR_LEN = 72
@@ -20,7 +23,7 @@ EID_CID_NA_STR_LEN = 136
 FLAG_ECID_QUERY = 2000
 FLAG_CUCKOO_QUERY = 3000
 FLAG_DELAY_MEASURE = 9999
-burst_size = 2000  # 当发包数量大于100000个或发包数量不限时生效，规定burst_size
+burst_size = 2000  # burst_size takes effect when the number of packets sent is greater than 100000 or unlimited
 
 
 class ShowProcess(object):
@@ -68,21 +71,21 @@ class SEAHash(object):
         self.lib_eid.calculate_eid(l, c_char_p(uri.encode("UTF-8")))
         s = "".join([bytes.hex(i) for i in l])
         return s
-        
+
 
 def ip2NAStr(ip: str) -> str:
-    # 处理IP地址，将IPv6和IPv4分开讨论, 如果已经是NA_STR则直接返回
+    # Handle IP addresses, discuss IPv6 and IPv4 separately, and return directly if it is already NA_STR
     result = ""
     if ip == "":
         return result
     if ":" in ip:
-        keylen = len(ip.split(":"))
-        if keylen > 8:
+        key_len = len(ip.split(":"))
+        if key_len > 8:
             print("IP addr input error!")
             return ""
-        elif keylen < 8:
+        elif key_len < 8:
             index = ip.find("::")
-            ip = ip[0:index + 1] + "0:" * (8 - keylen + 1) + ip[index + 2:]
+            ip = ip[0:index + 1] + "0:" * (8 - key_len + 1) + ip[index + 2:]
         NA_list = ip.split(":")
         for i in NA_list:
             if len(i) < 4:
@@ -91,12 +94,15 @@ def ip2NAStr(ip: str) -> str:
                 result += i
     elif "." in ip:
         nodeNA_list = ip.split(".")
+        if len(nodeNA_list) != 4:
+            print("IPv4 addr input error!")
+            return ""
         for i in nodeNA_list:
-            if len(i) < 4:
-                result += '0' * (4 - len(i)) + i
-            else:
-                result += i
-        result = "0" * 16 + result
+            if int(i) < 0 or int(i) > 255:
+                print("IP addr input error!")
+                return ""
+            result += hex(int(i))[2:].zfill(2)
+        result = "0" * 24 + result
     else:
         result = ip
     return result
@@ -109,12 +115,14 @@ def getTimeStamp() -> str:
 
 def getparser():
     parser = argparse.ArgumentParser(description="NMR client python version")
+    parser.add_argument('-v', '--version', required=False, type=str, metavar="Version",
+                        help="Show version of Client.py")
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
     parser.add_argument('-c', '--command', type=str, default="custom",
-                        choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl', 'rcid', 'ecid', 'dcid',
-                                 'dm', 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd', 'rcc', 'dcc', 'qcc'],
+                        choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl', 'rcid', 'ecid', 'dcid', 'dm',
+                                 'agent', 'custom', 'gr', 'gd', 'ge', 'gbd', 'gcr', 'gcd', 'gce', 'rcc', 'dcc', 'qcc'],
                         help="Input what kind of message to send,           "
                              "'r' -> register;                              "
                              "'d' -> deregister;                            "
@@ -125,8 +133,11 @@ def getparser():
                              "'dcid' -> eid+cid deregister simple           "
                              "'gr' -> global-register;                      "
                              "'gd' -> global-deregister;                    "
-                             "'gbd' -> global-batchDeregister;              "
                              "'ge' -> global-resolve; eid global resolve simple; "
+                             "'gbd' -> global-batchDeregister;              "
+                             "'gcr' -> global-register with cid;            "
+                             "'gcd' -> global-deregister with cid;          "
+                             "'gce' -> global-resolve with cid;             "
                              "'rcc' -> register for cuckoo filter version   "
                              "'dcc' -> deregister for cuckoo filter version "
                              "'qcc' -> eid query for cuckoo filter version  "
@@ -355,9 +366,9 @@ def getRandomAllMsg(num: int, command: str):
 
 def getSequenceMsg(num: int, command: str, extra_num: int):
     print("Get Sequence message...")
-    NA = "99999999999999999999999999999999"
-    EID = "b" * 40
-    CID = "c" * 64
+    NA = "9" * NA_STR_LEN
+    EID = "b" * EID_STR_LEN
+    CID = "c" * CID_STR_LEN
     eid_list = []
     cid_list = []
     position = 10  # 标记返回报文成功的标志位的起始位置
@@ -429,51 +440,55 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
         requestID = getRequestID()
         if command == "register" or command == "r":
             position = 10
-            msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-                                     "030100" + timeStamp + "0006010101020102"
+            msg = "6f" + requestID + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "030100" + timeStamp + "0006010101020102"
         elif command == "deregister" or command == "d":
             position = 10
-            msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+            msg = "73" + requestID + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
         elif command == "resolve" or command == "e" or command == "eid":
             position = 2
-            msg = "71" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
-
-        elif command == "register_cid" or command == "rcid":
-            position = 10
-            msg = "6f" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" \
-                                                                                             "030100" + timeStamp + "0000"
-        elif command == "deregister_cid" or command == "dcid":
-            position = 10
-            msg = "73" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "c" * 64 + "99999999999999999999999999999999" + timeStamp
-        elif command == "resolve_cid" or command == "ecid":
-            position = FLAG_ECID_QUERY
-            msg = "7100000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + "0" * 64 + timeStamp
-
+            msg = "71" + requestID + "b" * 40 + timeStamp
         elif command == "resolve+tlv" or command == "tlv":
             position = 2
-            msg = "71000006" + requestID + "0000000000000000000000000000000000000000" + timeStamp + "010101020102"
+            msg = "71000006" + requestID + "0" * EID_STR_LEN + timeStamp + "010101020102"
         elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
             position = 10
-            msg = "73" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+            msg = "73" + requestID + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+        elif command == "register_cid" or command == "rcid":
+            position = 10
+            msg = "6f" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "030100" + timeStamp + "0000"
+        elif command == "deregister_cid" or command == "dcid":
+            position = 10
+            msg = "73" + requestID + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+        elif command == "resolve_cid" or command == "ecid":
+            position = FLAG_ECID_QUERY
+            msg = "7100000000" + requestID + "b" * EID_STR_LEN + "0" * CID_STR_LEN + timeStamp
         elif command == "globalRegister" or command == "gr":
             position = 10
-            msg = "0b" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" \
-                                     "010100" + timeStamp + "0000"
+            msg = "0b" + requestID + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0000"
         elif command == "globalResolve" or command == "ge":
             position = 2
-            msg = "0d000000" + requestID + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" + timeStamp
+            msg = "0d000000" + requestID + "b" * EID_STR_LEN + timeStamp
         elif command == "globalDeregister" or command == "gd":
             position = 10
-            msg = "0f" + requestID + "00" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+            msg = "0f" + requestID + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
         elif command == "globalBatchDeregister" or command == "gbd":
             position = 10
-            msg = "0f" + requestID + "01" + "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb99999999999999999999999999999999" + timeStamp
+            msg = "0f" + requestID + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+        elif command == "gcr":
+            position = 10
+            msg = "0b" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0000"
+        elif command == "gce":
+            position = 2
+            msg = "0d00000000" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + timeStamp
+        elif command == "gcd":
+            position = 10
+            msg = "0f" + requestID + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + timeStamp
         elif command == "rcc":
             position = 10
-            msg = "6f" + requestID + "b" * EID_STR_LEN + "1" * 32 + timeStamp
+            msg = "6f" + requestID + "b" * EID_STR_LEN + "1" * NA_STR_LEN + timeStamp
         elif command == "dcc":
             position = 10
-            msg = "73" + requestID + "b" * EID_STR_LEN + "1" * 32 + timeStamp
+            msg = "73" + requestID + "b" * EID_STR_LEN + "1" * NA_STR_LEN + timeStamp
         elif command == "qcc":
             position = FLAG_CUCKOO_QUERY
             msg = "71" + requestID + "b" * EID_STR_LEN + timeStamp
@@ -500,7 +515,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             tlv_len = hex(int(len(content) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 2
-            msg = "7100" + tlv_len_str + requestID + "0" * 40 + timeStamp + content
+            msg = "7100" + tlv_len_str + requestID + "0" * EID_STR_LEN + timeStamp + content
         elif command == "CuckooRegister" or command == "ccr":
             position = 10
             msg = "6f" + requestID + content + timeStamp
@@ -511,15 +526,15 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             position = FLAG_CUCKOO_QUERY
             msg = "71" + requestID + content + timeStamp
         elif command == "EIDRegister" or command == "er":
-            eid_na = content[:72]
-            tlv = content[72:]
+            eid_na = content[:EID_NA_STR_LEN]
+            tlv = content[EID_NA_STR_LEN:]
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 10
             msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
         elif command == "EIDCIDRegister" or command == "ecr":
-            eid_cid_na = content[:136]
-            tlv = content[136:]
+            eid_cid_na = content[:EID_CID_NA_STR_LEN]
+            tlv = content[EID_CID_NA_STR_LEN:]
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 10
@@ -546,7 +561,6 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "03" + timeStamp
             position = FLAG_DELAY_MEASURE
         else:
-            # todo : 批量随机注册实现？
             msg = ""
         if flag or num < 0:
             return msg, position
@@ -575,8 +589,8 @@ def show_details(receive_message: str):
         status = status_dict[receive_message[10:12]]
         time_stamp = receive_message[12:20]
         print("=== response details ===:\n[request_id]: {}, [deregister status]: {}, [timestamp]: {}".format(request_id,
-                                                                                                           status,
-                                                                                                           time_stamp))
+                                                                                                             status,
+                                                                                                             time_stamp))
     # 解析响应报文
     elif receive_message[:2] == "72":
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
@@ -793,6 +807,10 @@ def run():
     burstSize = args.burstSize
     flag_random_requestID = args.ranReqID
     seahash = SEAHash()
+
+    if args.version is not None:
+        print("Script on version: {}".format(VERSION))
+        return
 
     if args.uriHash is not None:
         eid = seahash.get_SEA_Hash_EID(args.uriHash)
