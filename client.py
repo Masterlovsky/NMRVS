@@ -114,9 +114,7 @@ def getTimeStamp() -> str:
 
 
 def getparser():
-    parser = argparse.ArgumentParser(description="NMR client python version")
-    parser.add_argument('-v', '--version', required=False, type=str, metavar="Version",
-                        help="Show version of Client.py")
+    parser = argparse.ArgumentParser(description="NMR client python version{}".format(VERSION))
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
@@ -807,10 +805,6 @@ def run():
     burstSize = args.burstSize
     flag_random_requestID = args.ranReqID
     seahash = SEAHash()
-
-    if args.version is not None:
-        print("Script on version: {}".format(VERSION))
-        return
 
     if args.uriHash is not None:
         eid = seahash.get_SEA_Hash_EID(args.uriHash)
