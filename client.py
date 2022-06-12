@@ -114,7 +114,8 @@ def getTimeStamp() -> str:
 
 
 def getparser():
-    parser = argparse.ArgumentParser(description="NMR client python version{}".format(VERSION))
+    parser = argparse.ArgumentParser(description="NMR client python version {}".format(VERSION))
+    parser.add_argument('-v', '--version', required=False, action="version", help="Print version.")
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
@@ -146,20 +147,22 @@ def getparser():
                              "'custom' -> user defined payload message, use with parameter -m <msg>;")
     parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
-    parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs=2, metavar=("QueryType", "Content"),
+    parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs='+',
+                        metavar=("QueryType", "Content", "g[opt]"),
                         help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip; 5:cid->eid}."
-                             " use: -ecq <QueryType> <EID>/<CID>/<Tag>")
+                             " use: -ecq <QueryType> <content>{<EID>,<CID>,<Tag>} <*g>")
     parser.add_argument('-tq', '--TagQuery', required=False, type=str, metavar="TLV(HexStr)",
                         help="resolve self defined Tag, use: -tq <tlv>")
     parser.add_argument('-er', '--EIDRegister', required=False, type=str, nargs='+', metavar=("EID+NA", "TAG(opt)"),
                         help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
     parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+',
-                        metavar=("EID+CID+NA", "TAG(opt)"),
-                        help="register self defined EID+CID+NA and optional tag, use: -er <EID+CID+NA> <tag>")
+                        metavar=("EID+CID+NA", "TAG(opt)", "g[opt]"),
+                        help="register self defined EID+CID+NA and optional tag, use: -er <EID+CID+NA> <tag> g[opt]")
     parser.add_argument('-ed', '--EIDDeregister', required=False, type=str, metavar="EID+NA",
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
-    parser.add_argument('-ecd', '--EIDCIDDeregister', required=False, type=str, metavar="EID+CID+NA",
-                        help="deregister self defined EID+CID+NA,  use: -ecd <EID+CID+NA>")
+    parser.add_argument('-ecd', '--EIDCIDDeregister', required=False, type=str, nargs='+',
+                        metavar=("EID+CID+NA", "g[opt]"),
+                        help="deregister self defined EID+CID+NA,  use: -ecd <EID+CID+NA> g[opt]")
     parser.add_argument('-ebd', '--EIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
     parser.add_argument('-ecbd', '--EIDCIDBatchDeregister', required=False, type=str, metavar="NA",
@@ -474,7 +477,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "0f" + requestID + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
         elif command == "gcr":
             position = 10
-            msg = "0b" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0000"
+            msg = "0b" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0003010101"
         elif command == "gce":
             position = 2
             msg = "0d00000000" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + timeStamp
@@ -495,20 +498,21 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "71000000" + requestID + content + timeStamp
         elif command == "EIDCIDQuery" or command == "ecq":
             position = FLAG_ECID_QUERY
-            queryType = content[:1]
-            origin_content = content[1:]
+            msg_type = content[:2]
+            queryType = content[2]
+            origin_content = content[3:]
             if queryType == "0" or queryType == "1":
-                msg = "7100" + "0" + queryType + "0000" + requestID + origin_content + "0" * CID_STR_LEN + timeStamp
+                msg = msg_type + "00" + "0" + queryType + "0000" + requestID + origin_content + "0" * CID_STR_LEN + timeStamp
             elif queryType == "2":
-                msg = "7100" + "02" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
+                msg = msg_type + "00" + "02" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
             elif queryType == "3":
-                msg = "7100" + "03" + "0000" + requestID + origin_content + timeStamp
+                msg = msg_type + "00" + "03" + "0000" + requestID + origin_content + timeStamp
             elif queryType == "4":
                 tlv_len = hex(int(len(origin_content) / 2))[2:]
                 tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-                msg = "7100" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
+                msg = msg_type + "00" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
             elif queryType == "5":
-                msg = "7100" + "05" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
+                msg = msg_type + "00" + "05" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
         elif command == "TagQuery" or command == "tq":
             tlv_len = hex(int(len(content) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
@@ -531,18 +535,20 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             position = 10
             msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
         elif command == "EIDCIDRegister" or command == "ecr":
-            eid_cid_na = content[:EID_CID_NA_STR_LEN]
-            tlv = content[EID_CID_NA_STR_LEN:]
+            msg_type = content[:2]
+            eid_cid_na = content[2:EID_CID_NA_STR_LEN]
+            tlv = content[2 + EID_CID_NA_STR_LEN:]
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 10
-            msg = "6f" + requestID + eid_cid_na + "030100" + timeStamp + tlv_len_str + tlv
+            msg = msg_type + requestID + eid_cid_na + "030100" + timeStamp + tlv_len_str + tlv
         elif command == "EIDDeregister" or command == "ed":
             position = 10
             msg = "73" + requestID + "00" + content + timeStamp
         elif command == "EIDCIDDeregister" or command == "ecd":
+            msg_type = content[:2]
             position = 10
-            msg = "73" + requestID + "00" + content + timeStamp
+            msg = msg_type + requestID + "00" + content[2:] + timeStamp
         elif command == "EIDBatchDeregister" or command == "ebd":
             position = 10
             msg = "73" + requestID + "01" + "b" * EID_STR_LEN + content + timeStamp
@@ -570,7 +576,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
 
 def show_details(receive_message: str):
     # 注册响应报文
-    if receive_message[:2] == "70":
+    if receive_message[:2] == "70" or receive_message[:2] == "0c":
         request_id = receive_message[2:10]
         status_dict = {"01": "registered_successful", "02": "parameter_error", "03": "internal_error",
                        "04": "storage_is_full", "05": "other_errors"}
@@ -580,7 +586,7 @@ def show_details(receive_message: str):
                                                                                                            status,
                                                                                                            time_stamp))
     # 注销响应报文
-    elif receive_message[:2] == "74":
+    elif receive_message[:2] == "74" or receive_message[:2] == "10":
         request_id = receive_message[2:10]
         status_dict = {"01": "delete_successful", "02": "parameter_error", "03": "internal_error",
                        "04": "storage_is_full", "05": "other_errors"}
@@ -724,7 +730,7 @@ def show_details(receive_message: str):
 
 def show_details_ecid(receive_message: str):
     # eid+cid 解析响应报文
-    if receive_message[:2] != "72":
+    if receive_message[:2] != "72" or receive_message[:2] != "0e":
         return
     status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
     content_len_dict = {"00": EID_NA_STR_LEN, "01": EID_CID_STR_LEN, "02": CID_NA_STR_LEN, "03": EID_CID_NA_STR_LEN,
@@ -819,6 +825,9 @@ def run():
         msg, p = getMsg("EIDQuery", EID, number, flag_random_requestID)
 
     elif args.EIDCIDQuery is not None:
+        m_type = "71"
+        if len(args.EIDCIDQuery) == 3 and args.EIDCIDQuery[2] == 'g':
+            m_type = "0d"
         queryType = args.EIDCIDQuery[0]
         content = args.EIDCIDQuery[1]
         if ((queryType == "0" or queryType == "1") and len(content) == EID_STR_LEN) \
@@ -826,7 +835,7 @@ def run():
                 or (queryType == "5" and len(content) == CID_STR_LEN) \
                 or (queryType == "3" and len(content) == EID_CID_STR_LEN) \
                 or (queryType == "4"):
-            content = queryType + content
+            content = m_type + queryType + content
         else:
             print("invalid input <EID>/<CID>/<TAG> length error!")
             return
@@ -849,7 +858,12 @@ def run():
         msg, p = getMsg("EIDRegister", EIDNA + tag, number, flag_random_requestID)
 
     elif args.EIDCIDRegister is not None:
-        if len(args.EIDCIDRegister) > 1:
+        m_type = "6f"
+        argc = len(args.EIDCIDRegister)
+        if args.EIDCIDRegister[argc - 1] == 'g':
+            m_type = "0b"
+            argc -= 1
+        if argc > 1:
             EIDCIDNA = args.EIDCIDRegister[0]
             tag = args.EIDCIDRegister[1]
         else:
@@ -858,7 +872,7 @@ def run():
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDRegister", EIDCIDNA + tag, number, flag_random_requestID)
+        msg, p = getMsg("EIDCIDRegister", m_type + EIDCIDNA + tag, number, flag_random_requestID)
 
     elif args.EIDDeregister is not None:
         EIDNA = args.EIDDeregister
@@ -868,11 +882,16 @@ def run():
         msg, p = getMsg("EIDDeregister", EIDNA, number, flag_random_requestID)
 
     elif args.EIDCIDDeregister is not None:
-        EIDCIDNA = args.EIDCIDDeregister
+        argc = len(args.EIDCIDDeregister)
+        m_type = "73"
+        if argc == 2 and args.EIDCIDDeregister[1] == 'g':
+            m_type = "0f"
+            argc -= 1;
+        EIDCIDNA = args.EIDCIDDeregister[0]
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDDeregister", EIDCIDNA, number, flag_random_requestID)
+        msg, p = getMsg("EIDCIDDeregister", m_type + EIDCIDNA, number, flag_random_requestID)
 
     elif args.EIDBatchDeregister is not None:
         NA = args.EIDBatchDeregister
