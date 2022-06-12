@@ -115,7 +115,7 @@ def getTimeStamp() -> str:
 
 def getparser():
     parser = argparse.ArgumentParser(description="NMR client python version {}".format(VERSION))
-    parser.add_argument('-v', '--version', required=False, action="version", help="Print version.")
+    parser.add_argument('-v', '--version', action="version", version=VERSION, help="Print version.")
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
                         help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
@@ -147,21 +147,18 @@ def getparser():
                              "'custom' -> user defined payload message, use with parameter -m <msg>;")
     parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
-    parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs='+',
-                        metavar=("QueryType", "Content", "g[opt]"),
+    parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs='+', metavar="qType/content/g[opt]",
                         help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip; 5:cid->eid}."
-                             " use: -ecq <QueryType> <content>{<EID>,<CID>,<Tag>} <*g>")
+                             " use: -ecq <qType> <content>{<EID>,<CID>,<Tag>} <g[opt]>")
     parser.add_argument('-tq', '--TagQuery', required=False, type=str, metavar="TLV(HexStr)",
                         help="resolve self defined Tag, use: -tq <tlv>")
     parser.add_argument('-er', '--EIDRegister', required=False, type=str, nargs='+', metavar=("EID+NA", "TAG(opt)"),
                         help="register self defined EID+NA and optional tag, use: -er <EID+NA> <tag>")
-    parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+',
-                        metavar=("EID+CID+NA", "TAG(opt)", "g[opt]"),
+    parser.add_argument('-ecr', '--EIDCIDRegister', required=False, type=str, nargs='+', metavar="content/tag/g[opt]",
                         help="register self defined EID+CID+NA and optional tag, use: -er <EID+CID+NA> <tag> g[opt]")
     parser.add_argument('-ed', '--EIDDeregister', required=False, type=str, metavar="EID+NA",
                         help="deregister self defined EID+NA,  use: -ed <EID+NA>")
-    parser.add_argument('-ecd', '--EIDCIDDeregister', required=False, type=str, nargs='+',
-                        metavar=("EID+CID+NA", "g[opt]"),
+    parser.add_argument('-ecd', '--EIDCIDDeregister', required=False, type=str, nargs='+', metavar="content_g[opt]",
                         help="deregister self defined EID+CID+NA,  use: -ecd <EID+CID+NA> g[opt]")
     parser.add_argument('-ebd', '--EIDBatchDeregister', required=False, type=str, metavar="NA",
                         help="Batch-deregister from self defined NA,  use: -ebd <NA>")
@@ -730,7 +727,7 @@ def show_details(receive_message: str):
 
 def show_details_ecid(receive_message: str):
     # eid+cid 解析响应报文
-    if receive_message[:2] != "72" or receive_message[:2] != "0e":
+    if receive_message[:2] not in ("72", "0e"):
         return
     status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
     content_len_dict = {"00": EID_NA_STR_LEN, "01": EID_CID_STR_LEN, "02": CID_NA_STR_LEN, "03": EID_CID_NA_STR_LEN,
