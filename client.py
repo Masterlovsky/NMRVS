@@ -533,7 +533,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
         elif command == "EIDCIDRegister" or command == "ecr":
             msg_type = content[:2]
-            eid_cid_na = content[2:EID_CID_NA_STR_LEN]
+            eid_cid_na = content[2:EID_CID_NA_STR_LEN + 2]
             tlv = content[2 + EID_CID_NA_STR_LEN:]
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
