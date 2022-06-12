@@ -476,7 +476,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             position = 10
             msg = "0b" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0003010101"
         elif command == "gce":
-            position = 2
+            position = FLAG_ECID_QUERY
             msg = "0d00000000" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + timeStamp
         elif command == "gcd":
             position = 10
