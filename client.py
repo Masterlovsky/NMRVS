@@ -444,7 +444,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             msg = "73" + requestID + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
         elif command == "resolve" or command == "e" or command == "eid":
             position = 2
-            msg = "71" + requestID + "b" * 40 + timeStamp
+            msg = "71000000" + requestID + "b" * 40 + timeStamp
         elif command == "resolve+tlv" or command == "tlv":
             position = 2
             msg = "71000006" + requestID + "0" * EID_STR_LEN + timeStamp + "010101020102"
