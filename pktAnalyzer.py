@@ -81,7 +81,7 @@ def draw_dist_bar(delay_l: list, bins: int = 10):
     # draw cdf line use pyecharts in the same html
     cdf = hist.cumsum() / hist.sum()
     x = hist.index.astype(str).tolist()
-    x = ["[0, " + x[0].split(",")[0][1:] + ")"] + x
+    x = ["0"] + [i.split(",")[1][1:-1] for i in x]
     y = [0] + cdf.values.tolist()
     line_cdf = (
         Line(init_opts=opts.InitOpts(width="960px", height="540px", theme=ThemeType.WHITE,
