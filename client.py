@@ -883,7 +883,7 @@ def run():
         m_type = "73"
         if argc == 2 and args.EIDCIDDeregister[1] == 'g':
             m_type = "0f"
-            argc -= 1;
+            argc -= 1
         EIDCIDNA = args.EIDCIDDeregister[0]
         if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")

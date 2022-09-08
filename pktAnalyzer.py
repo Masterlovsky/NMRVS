@@ -7,8 +7,10 @@ Used to Analyze pcap files.
 from queue import Queue
 
 import yaml
+import pandas as pd
+import matplotlib.pyplot as plt
 from pyecharts import options as opts
-from pyecharts.charts import Line
+from pyecharts.charts import Line, Bar, Page
 from pyecharts.globals import ThemeType
 from scapy.all import *
 
@@ -39,11 +41,85 @@ class ShowProcess(object):
         self.i = 1
 
 
-def drawPicture(delay_l: list, time_out: float):
+def draw_dist_bar(delay_l: list, bins: int = 10):
+    """
+    draw delay distribution bar
+    :param delay_l: delay list
+    :param bins: number of bins
+    :return: None
+    """
+    df = pd.DataFrame(delay_l, columns=["delay"], dtype="float")
+    # get mean value, set time unit
+    time_unit = "ms"
+    unit = 1
+    mean = df["delay"].mean()
+    if mean < 10:
+        time_unit = "us"
+        unit = 1000
+    # get hist list for df use cut
+    hist_list = pd.cut(df["delay"] * unit, bins=bins, right=False, precision=0)
+    # print(hist_list.value_counts(sort=False))
+    page = Page(layout=Page.SimplePageLayout, page_title="Delay Distribution")
+    # use pyecharts to draw hist bar
+    hist = hist_list.value_counts(sort=False)
+    line_dist = (
+        Bar(init_opts=opts.InitOpts(width="960px", height="540px", theme=ThemeType.WHITE,
+                                    page_title="DelayDistributionView",
+                                    chart_id="masterlovsky_bar_01"))
+            .add_xaxis(hist.index.astype(str).tolist())
+            .add_yaxis("count", hist.values.tolist(), label_opts=opts.LabelOpts(is_show=False))
+            .set_global_opts(title_opts=opts.TitleOpts(title="Delay Distribution"),
+                             xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
+                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                             font_weight="bold")),
+                             yaxis_opts=opts.AxisOpts(name="count"),
+                             datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
+                             )
+    )
+    page.add(line_dist)
+
+    # draw cdf line use pyecharts in the same html
+    cdf = hist.cumsum() / hist.sum()
+    x = hist.index.astype(str).tolist()
+    x = ["[0, " + x[0].split(",")[0][1:] + ")"] + x
+    y = [0] + cdf.values.tolist()
+    line_cdf = (
+        Line(init_opts=opts.InitOpts(width="960px", height="540px", theme=ThemeType.WHITE,
+                                     page_title="DelayCDFView",
+                                     chart_id="masterlovsky_line_02"))
+            .add_xaxis(x)
+            .add_yaxis("probability", y, is_step=True, label_opts=opts.LabelOpts(is_show=False),
+                       linestyle_opts=opts.LineStyleOpts(width=2),
+                       itemstyle_opts=opts.ItemStyleOpts(border_width=2))
+            .set_global_opts(title_opts=opts.TitleOpts(title="Delay CDF"),
+                             xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
+                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                             font_weight="bold")),
+                             datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
+                             )
+    )
+    page.add(line_cdf)
+    page.render("delay_dist.html")
+    print("render delay_dist.html done!")
+
+
+def happy():
+    """
+    if today is teacher's day, print("Happy Teacher's Day!")
+    :return: None
+    """
+    import datetime
+    mon = datetime.datetime.now().month
+    d = datetime.datetime.now().day
+    if mon == 9 and (d == 10 or d == 9):
+        print("Happy Teacher's Day! ^_^")
+
+
+def draw_time_seq_line(delay_l: list, time_out: float):
     """
     draw a picture use packet delay list and timeout.
-    :param delay_l: 单位：ms
-    :param time_out: 单位：ms
+    :param delay_l: Unit: ms
+    :param time_out: Unit: ms
     """
     if len(delay_l) == 1:
         print("Only one packet pair, skip drawing Picture process.")
@@ -109,7 +185,7 @@ def drawPicture(delay_l: list, time_out: float):
                              )
             .render("line_delay.html")
     )
-    print("render html done!")
+    print("render line_delay.html done!")
 
 
 def readConf2Yml(path: str):
@@ -217,8 +293,11 @@ if __name__ == '__main__':
     yml = readConf2Yml("conf.yml")
     timeout = yml["TIME_OUT"]
     xtick_num = yml["DRAW"]["XTICK_NUM"]
+    dist_bins = yml["DRAW"]["DIST_BINS"]
     delay_list = []
     pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
     processed_pkt_num = 0
     run()
-    drawPicture(delay_list, timeout)
+    draw_time_seq_line(delay_list, timeout)
+    draw_dist_bar(delay_list, dist_bins)
+    happy()  # Easter egg: print a happy face
