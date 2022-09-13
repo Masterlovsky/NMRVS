@@ -66,15 +66,15 @@ def draw_dist_bar(delay_l: list, bins: int = 10):
         Bar(init_opts=opts.InitOpts(width="960px", height="540px", theme=ThemeType.WHITE,
                                     page_title="DelayDistributionView",
                                     chart_id="masterlovsky_bar_01"))
-            .add_xaxis(hist.index.astype(str).tolist())
-            .add_yaxis("count", hist.values.tolist(), label_opts=opts.LabelOpts(is_show=False))
-            .set_global_opts(title_opts=opts.TitleOpts(title="Delay Distribution"),
-                             xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
-                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
-                                                                                             font_weight="bold")),
-                             yaxis_opts=opts.AxisOpts(name="count"),
-                             datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
-                             )
+        .add_xaxis(hist.index.astype(str).tolist())
+        .add_yaxis("count", hist.values.tolist(), label_opts=opts.LabelOpts(is_show=False))
+        .set_global_opts(title_opts=opts.TitleOpts(title="Delay Distribution"),
+                         xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
+                                                  name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                         font_weight="bold")),
+                         yaxis_opts=opts.AxisOpts(name="count"),
+                         datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
+                         )
     )
     page.add(line_dist)
 
@@ -87,32 +87,20 @@ def draw_dist_bar(delay_l: list, bins: int = 10):
         Line(init_opts=opts.InitOpts(width="960px", height="540px", theme=ThemeType.WHITE,
                                      page_title="DelayCDFView",
                                      chart_id="masterlovsky_line_02"))
-            .add_xaxis(x)
-            .add_yaxis("probability", y, is_step=True, label_opts=opts.LabelOpts(is_show=False),
-                       linestyle_opts=opts.LineStyleOpts(width=2),
-                       itemstyle_opts=opts.ItemStyleOpts(border_width=2))
-            .set_global_opts(title_opts=opts.TitleOpts(title="Delay CDF"),
-                             xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
-                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
-                                                                                             font_weight="bold")),
-                             datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
-                             )
+        .add_xaxis(x)
+        .add_yaxis("probability", y, is_step=True, label_opts=opts.LabelOpts(is_show=False),
+                   linestyle_opts=opts.LineStyleOpts(width=2),
+                   itemstyle_opts=opts.ItemStyleOpts(border_width=2))
+        .set_global_opts(title_opts=opts.TitleOpts(title="Delay CDF"),
+                         xaxis_opts=opts.AxisOpts(name="delay" + "(" + time_unit + ")",
+                                                  name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                         font_weight="bold")),
+                         datazoom_opts=opts.DataZoomOpts(range_start=0, range_end=100, type_="inside"),
+                         )
     )
     page.add(line_cdf)
     page.render("delay_dist.html")
     print("render delay_dist.html done!")
-
-
-def happy():
-    """
-    if today is teacher's day, print("Happy Teacher's Day!")
-    :return: None
-    """
-    import datetime
-    mon = datetime.datetime.now().month
-    d = datetime.datetime.now().day
-    if mon == 9 and (d == 10 or d == 9):
-        print("Happy Teacher's Day! ^_^")
 
 
 def draw_time_seq_line(delay_l: list, time_out: float):
@@ -139,51 +127,51 @@ def draw_time_seq_line(delay_l: list, time_out: float):
         Line(init_opts=opts.InitOpts(width="1280px", height="720px", theme=ThemeType.WHITE,
                                      page_title="ResolveDelayView",
                                      chart_id="masterlovsky_line_01"))
-            .add_xaxis(x)
-            .add_yaxis("delay", y, symbol_size=10,
-                       linestyle_opts=opts.LineStyleOpts(width=2),
-                       itemstyle_opts=opts.ItemStyleOpts(border_width=2),
-                       markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(y=time_out * unit)]),
-                       markpoint_opts=opts.MarkPointOpts(
-                           data=[
-                               opts.MarkPointItem(name="MAX", type_="max", symbol_size=70,
-                                                  coord=[x[y_max_idx], y[y_max_idx]], value=y[y_max_idx]),
-                               opts.MarkPointItem(name="MIN", type_="min", symbol_size=70,
-                                                  coord=[x[y_min_idx], y[y_min_idx]], value=y[y_min_idx])
-                           ]
-                       )
-                       )
-            .set_global_opts(title_opts=opts.TitleOpts(title="DelayMeasure Line-Chart"),
-                             xaxis_opts=opts.AxisOpts(type_="category",
-                                                      name="packetIndex", name_gap=36, name_location="middle",
-                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
-                                                                                             font_weight="bold"),
-                                                      boundary_gap=False,
-                                                      axislabel_opts=opts.LabelOpts(margin=16, color="black"),
-                                                      axistick_opts=opts.AxisTickOpts(
-                                                          is_show=True, length=8,
-                                                          linestyle_opts=opts.LineStyleOpts(color="grey"),
-                                                      ),
-                                                      splitline_opts=opts.SplitLineOpts(
-                                                          is_show=True,
-                                                          linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
-                                                      )),
-                             yaxis_opts=opts.AxisOpts(name="Delay" + ("(us)" if unit == 1000 else "(ms)"), name_gap=45,
-                                                      name_location="middle",
-                                                      name_textstyle_opts=opts.TextStyleOpts(font_size=14,
-                                                                                             font_weight="bold"),
-                                                      boundary_gap=False,
-                                                      axislabel_opts=opts.LabelOpts(margin=16, color="black"),
-                                                      axistick_opts=opts.AxisTickOpts(
-                                                          is_show=True, length=8,
-                                                          linestyle_opts=opts.LineStyleOpts(color="grey"),
-                                                      ),
-                                                      splitline_opts=opts.SplitLineOpts(
-                                                          is_show=True,
-                                                          linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
-                                                      ))
-                             )
-            .render("line_delay.html")
+        .add_xaxis(x)
+        .add_yaxis("delay", y, symbol_size=10,
+                   linestyle_opts=opts.LineStyleOpts(width=2),
+                   itemstyle_opts=opts.ItemStyleOpts(border_width=2),
+                   markline_opts=opts.MarkLineOpts(data=[opts.MarkLineItem(y=time_out * unit)]),
+                   markpoint_opts=opts.MarkPointOpts(
+                       data=[
+                           opts.MarkPointItem(name="MAX", type_="max", symbol_size=70,
+                                              coord=[x[y_max_idx], y[y_max_idx]], value=y[y_max_idx]),
+                           opts.MarkPointItem(name="MIN", type_="min", symbol_size=70,
+                                              coord=[x[y_min_idx], y[y_min_idx]], value=y[y_min_idx])
+                       ]
+                   )
+                   )
+        .set_global_opts(title_opts=opts.TitleOpts(title="DelayMeasure Line-Chart"),
+                         xaxis_opts=opts.AxisOpts(type_="category",
+                                                  name="packetIndex", name_gap=36, name_location="middle",
+                                                  name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                         font_weight="bold"),
+                                                  boundary_gap=False,
+                                                  axislabel_opts=opts.LabelOpts(margin=16, color="black"),
+                                                  axistick_opts=opts.AxisTickOpts(
+                                                      is_show=True, length=8,
+                                                      linestyle_opts=opts.LineStyleOpts(color="grey"),
+                                                  ),
+                                                  splitline_opts=opts.SplitLineOpts(
+                                                      is_show=True,
+                                                      linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
+                                                  )),
+                         yaxis_opts=opts.AxisOpts(name="Delay" + ("(us)" if unit == 1000 else "(ms)"), name_gap=45,
+                                                  name_location="middle",
+                                                  name_textstyle_opts=opts.TextStyleOpts(font_size=14,
+                                                                                         font_weight="bold"),
+                                                  boundary_gap=False,
+                                                  axislabel_opts=opts.LabelOpts(margin=16, color="black"),
+                                                  axistick_opts=opts.AxisTickOpts(
+                                                      is_show=True, length=8,
+                                                      linestyle_opts=opts.LineStyleOpts(color="grey"),
+                                                  ),
+                                                  splitline_opts=opts.SplitLineOpts(
+                                                      is_show=True,
+                                                      linestyle_opts=opts.LineStyleOpts(color="grey", opacity=0.4)
+                                                  ))
+                         )
+        .render("line_delay.html")
     )
     print("render line_delay.html done!")
 
@@ -300,4 +288,3 @@ if __name__ == '__main__':
     run()
     draw_time_seq_line(delay_list, timeout)
     draw_dist_bar(delay_list, dist_bins)
-    happy()  # Easter egg: print a happy face
