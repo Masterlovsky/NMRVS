@@ -2,7 +2,7 @@
 """
 BY Masterlovsky 2021.06.09 version 1.0
 Used to send message to NMR nodes
-Update 2022.6.9 version 2.0
+Update 2023.1.5 version 2.1
 """
 import argparse
 import sys
@@ -12,7 +12,7 @@ import time
 import uuid
 from ctypes import *
 
-VERSION = "2.0"
+VERSION = "2.1"
 EID_STR_LEN = 40
 NA_STR_LEN = 32
 CID_STR_LEN = 64
@@ -28,30 +28,25 @@ burst_size = 2000  # burst_size takes effect when the number of packets sent is 
 
 class ShowProcess(object):
     """
-    显示处理进度的类
-    调用该类相关函数即可实现处理进度的显示
+    The class that displays the processing progress
+    Calling the related functions of this class can realize the display of the processing progress
     """
 
-    # i = 0 # 当前的处理进度
-    # max_steps = 0 # 总共需要处理的次数
-    # max_arrow = 50 #进度条的长度
-
-    # 初始化函数，需要知道总共的处理次数
+    # The initialization function needs to know the total number of processing times
     def __init__(self, max_steps):
-        self.max_steps = max_steps  # 总共需要处理的次数
-        self.max_arrow = 50  # 进度条的长度
-        self.i = 0  # 当前的处理进度
+        self.max_steps = max_steps
+        self.max_arrow = 50  # the length of the progress bar
+        self.i = 0  # current progress
 
-    # 显示函数，根据当前的处理进度i显示进度
-    # 效果为[>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>]100.00%
+    # shows: [>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>]100.00%
     def show_process(self, i=None):
         if i is not None:
             self.i = i
-        num_arrow = int(self.i * self.max_arrow / self.max_steps)  # 计算显示多少个'>'
-        num_line = self.max_arrow - num_arrow  # 计算显示多少个'-'
-        percent = self.i * 100.0 / self.max_steps  # 计算完成进度，格式为xx.xx%
-        process_bar = '\r' + '[' + '>' * num_arrow + '-' * num_line + ']' + '%.2f' % percent + '%'  # 带输出的字符串，'\r'表示不换行回到最左边
-        sys.stdout.write(process_bar)  # 这两句打印字符到终端
+        num_arrow = int(self.i * self.max_arrow / self.max_steps)
+        num_line = self.max_arrow - num_arrow
+        percent = self.i * 100.0 / self.max_steps
+        process_bar = '\r' + '[' + '>' * num_arrow + '-' * num_line + ']' + '%.2f' % percent + '%'
+        sys.stdout.write(process_bar)
         sys.stdout.flush()
         self.i += 1
 
@@ -67,9 +62,9 @@ class SEAHash(object):
 
     def get_SEA_Hash_EID(self, uri: str) -> str:
         self.lib_eid.calculate_eid.argtypes = [c_char_p, c_char_p]
-        l = create_string_buffer(20)
-        self.lib_eid.calculate_eid(l, c_char_p(uri.encode("UTF-8")))
-        s = "".join([bytes.hex(i) for i in l])
+        ll = create_string_buffer(20)
+        self.lib_eid.calculate_eid(ll, c_char_p(uri.encode("UTF-8")))
+        s = "".join([bytes.hex(i) for i in ll])
         return s
 
 
@@ -86,18 +81,18 @@ def ip2NAStr(ip: str) -> str:
         elif key_len < 8:
             index = ip.find("::")
             ip = ip[0:index + 1] + "0:" * (8 - key_len + 1) + ip[index + 2:]
-        NA_list = ip.split(":")
-        for i in NA_list:
+        na_list = ip.split(":")
+        for i in na_list:
             if len(i) < 4:
                 result += '0' * (4 - len(i)) + i
             else:
                 result += i
     elif "." in ip:
-        nodeNA_list = ip.split(".")
-        if len(nodeNA_list) != 4:
+        node_na_list = ip.split(".")
+        if len(node_na_list) != 4:
             print("IPv4 addr input error!")
             return ""
-        for i in nodeNA_list:
+        for i in node_na_list:
             if int(i) < 0 or int(i) > 255:
                 print("IP addr input error!")
                 return ""
@@ -109,8 +104,8 @@ def ip2NAStr(ip: str) -> str:
 
 
 def getTimeStamp() -> str:
-    timeStamp = int(time.time())
-    return hex(timeStamp)[-8:]
+    time_stamp = int(time.time())
+    return hex(time_stamp)[-8:]
 
 
 def getparser():
@@ -118,7 +113,11 @@ def getparser():
     parser.add_argument('-v', '--version', action="version", version=VERSION, help="Print version.")
     parser.add_argument('-i', '--ip', required=True, type=str, help="IPv4/IPv6 address of NMR node")
     parser.add_argument('-p', '--port', required=True, default=10061, type=int,
-                        help="port of NMR node, 10061 for level 1; 10062 for level 2; 10063 for level 3; 10090 for global resolution")
+                        help="port number of NMR node, "
+                             "10061 -> level1; "
+                             "10062 -> level2; "
+                             "10063 -> level3; "
+                             "10090 -> global")
     parser.add_argument('-c', '--command', type=str, default="custom",
                         choices=['r', 'd', 'bd', 'eid', 'tlv', 'rnl', 'rcid', 'ecid', 'dcid', 'dm',
                                  'agent', 'custom', 'gr', 'gd', 'ge', 'gbd', 'gcr', 'gcd', 'gce', 'rcc', 'dcc', 'qcc'],
@@ -148,8 +147,15 @@ def getparser():
     parser.add_argument('-eq', '--EIDQuery', required=False, type=str, metavar="EID(HexStr)",
                         help="resolve self defined EID, use: -eq <EID>")
     parser.add_argument('-ecq', '--EIDCIDQuery', required=False, type=str, nargs='+', metavar="qType/content/g[opt]",
-                        help="resolve self defined EID, CID, Tag, QueryType{0:eid->ip; 1:eid->cid; 2:cid->ip; 3:eid+cid->ip; 4:tag->eid+cid+ip; 5:cid->eid}."
-                             " use: -ecq <qType> <content>{<EID>,<CID>,<Tag>} <g[opt]>")
+                        help="resolve self defined EID, CID, Tag, "
+                             "QueryType:"
+                             "0:eid->ip;"
+                             "1:eid->cid;"
+                             "2:cid->ip;"
+                             "3:eid+cid->ip;"
+                             "4:tag->eid+cid+ip;"
+                             "5:cid->eid}."
+                             "use: -ecq <qType> <content>{<EID>,<CID>,<Tag>} <g[opt]>")
     parser.add_argument('-tq', '--TagQuery', required=False, type=str, metavar="TLV(HexStr)",
                         help="resolve self defined Tag, use: -tq <tlv>")
     parser.add_argument('-er', '--EIDRegister', required=False, type=str, nargs='+', metavar=("EID+NA", "TAG(opt)"),
@@ -197,7 +203,8 @@ def getparser():
     parser.add_argument('-d', '--detail', required=False, action="store_true", default=False,
                         help="analyze response message and show detail. (Only has effect in normal mode)")
     parser.add_argument('-b', '--burstSize', required=False, type=int, default=2000,
-                        help="The number of concurrent packets. Delay adjustment is triggered after each concurrent burst_size of packets. "
+                        help="The number of concurrent packets. "
+                             "Delay adjustment is triggered after each concurrent burst_size of packets. "
                              "(Only has effect when use '-n -1' or '-n 100000+')")
     parser.add_argument('-uh', '--uriHash', required=False, type=str, metavar="SEAHash",
                         help="calculate SEAHash of custom defined URI to EID")
@@ -325,34 +332,34 @@ def getRandomTLVStr(tag: str = "03") -> str:
 
 def getRandomAllMsg(num: int, command: str):
     print("Get RandomALL message...")
-    position = 10  # 标记返回报文成功的标志位的起始位置
+    position = 10  # Mark the starting position of the successful flag bit of the returned message
     msg = []
     if num >= 0:
         process_bar = ShowProcess(num - 1)
         for i in range(num):
             process_bar.show_process()
-            timeStamp = getTimeStamp()
-            requestID = getRequestID()
-            EID = getRandomEID()
-            NA = getRandomNA()
-            TAG = getRandomTLVStr()
-            CID = getRandomCID()
+            time_stamp = getTimeStamp()
+            request_id = getRequestID()
+            eid = getRandomEID()
+            na = getRandomNA()
+            tag = getRandomTLVStr()
+            cid = getRandomCID()
             if command == "rcc":
-                msg.append("6f" + requestID + EID + NA + timeStamp)
+                msg.append("6f" + request_id + eid + na + time_stamp)
             elif command == "dcc":
-                msg.append("73" + requestID + EID + NA + timeStamp)
+                msg.append("73" + request_id + eid + na + time_stamp)
             elif command == "qcc":
-                msg.append("71" + requestID + EID + timeStamp)
+                msg.append("71" + request_id + eid + time_stamp)
             elif command == "r":
-                msg.append("6f" + requestID + EID + NA + "030100" + timeStamp + TAG)
+                msg.append("6f" + request_id + eid + na + "030100" + time_stamp + tag)
             elif command == "rcid":
-                msg.append("6f" + requestID + EID + CID + NA + "030100" + timeStamp + TAG)
+                msg.append("6f" + request_id + eid + cid + na + "030100" + time_stamp + tag)
             elif command == "d":
-                msg.append("73" + requestID + "00" + EID + NA + timeStamp)
+                msg.append("73" + request_id + "00" + eid + na + time_stamp)
             elif command == "dcid":
-                msg.append("73" + requestID + "00" + EID + CID + NA + timeStamp)
+                msg.append("73" + request_id + "00" + eid + cid + na + time_stamp)
             elif command == "eid":
-                msg.append("71" + "000000" + requestID + EID + timeStamp)
+                msg.append("71" + "000000" + request_id + eid + time_stamp)
             # todo: 暂时不支持 ecid 全随机
             else:
                 print("getRandomAllMsg() value error!")
@@ -364,12 +371,12 @@ def getRandomAllMsg(num: int, command: str):
 
 def getSequenceMsg(num: int, command: str, extra_num: int):
     print("Get Sequence message...")
-    NA = "9" * NA_STR_LEN
-    EID = "b" * EID_STR_LEN
-    CID = "c" * CID_STR_LEN
+    na = "9" * NA_STR_LEN
+    eid = "b" * EID_STR_LEN
+    cid = "c" * CID_STR_LEN
     eid_list = []
     cid_list = []
-    position = 10  # 标记返回报文成功的标志位的起始位置
+    position = 10
     msg = []
     extra_cmd = ""
     if extra_num != 0:
@@ -382,24 +389,24 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
             cid_list = getSequenceCID(num)
         for i in range(num):
             process_bar.show_process()
-            timeStamp = getTimeStamp()
-            requestID = getRequestID()
+            time_stamp = getTimeStamp()
+            request_id = getRequestID()
             msg_str = ""
             if command == "re" or command == "registere":
-                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0000")
+                msg.append("6f" + request_id + eid_list[i] + na + "030100" + time_stamp + "0000")
             elif command == "rT" or command == "registerT":
-                msg.append("6f" + requestID + EID + NA + "030100" + timeStamp + getRandomTLVStr())
+                msg.append("6f" + request_id + eid + na + "030100" + time_stamp + getRandomTLVStr())
             elif command == 'ret' or command == "registeret":
-                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + "0006010101020102")
+                msg.append("6f" + request_id + eid_list[i] + na + "030100" + time_stamp + "0006010101020102")
             elif command == 'reT' or command == "registereT":
-                msg.append("6f" + requestID + eid_list[i] + NA + "030100" + timeStamp + getRandomTLVStr())
+                msg.append("6f" + request_id + eid_list[i] + na + "030100" + time_stamp + getRandomTLVStr())
             elif command == 'gre':
-                msg.append("0b" + requestID + eid_list[i] + NA + "010100" + timeStamp + "0000")
+                msg.append("0b" + request_id + eid_list[i] + na + "010100" + time_stamp + "0000")
             elif command == 'rcce':
-                msg.append("6f" + requestID + eid_list[i] + "1" * 32 + timeStamp)
+                msg.append("6f" + request_id + eid_list[i] + "1" * 32 + time_stamp)
             elif command[:-extra_num] == "rcid":
-                eid = EID
-                cid = CID
+                eid = eid
+                cid = cid
                 tlv = "0000"
                 if "e" in extra_cmd:
                     eid = eid_list[i]
@@ -409,7 +416,7 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
                     tlv = "0006010101020102"
                 if "T" in extra_cmd:
                     tlv = getRandomTLVStr()
-                msg_str = "6f" + requestID + eid + cid + NA + "030100" + timeStamp + tlv
+                msg_str = "6f" + request_id + eid + cid + na + "030100" + time_stamp + tlv
                 msg.append(msg_str)
             else:
                 print("Warning! Don't support this kind of sequence msg.")
@@ -421,116 +428,119 @@ def getSequenceMsg(num: int, command: str, extra_num: int):
 
 def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: bool = False):
     """
-    从输入指令判断对应的注册、注销、解析、RNL获取等报文，获取带有随机requestID的报文列表
-    :param flag_random_reqID: 是否使用随机requestID，默认不使用
-    :param num: 发送报文个数，默认只发送一个
+    Judging the corresponding registration, deregistration, resolution, rnl acquisition and other messages
+    from the input command, and obtaining a list of messages with random request ids
+    :param flag_random_reqID: Whether to use random request id, "False" by default
+    :param num: The number of packets to send, "one" is sent by default
     :param content: if command is EIDQuery and EIDRegister, content is EID or EID+NA
-    :param command:  用户输入的指令string
-    :return: msg_l: 请求报文列表;
-             position: 返回报文标志位的起始位置，用于判断指令是否执行成功
+    :param command:  user command in string
+    :return: (msg_l, p)
+             msg_l: request message list;
+             p: Returns the starting position of the message flag bit,
+             which is used to judge whether the command is executed successfully
     """
     msg_l = []
-    position = 0  # 标记返回报文成功的标志位的起始位置
-    flag = not flag_random_reqID  # 标记是否是普通消息（不需要random requestID）
+    position = 0
+    flag = not flag_random_reqID  # Whether the flag is a normal message (no random request id required)
     while num != 0:
         msg = ""
-        timeStamp = getTimeStamp()
-        requestID = getRequestID()
+        time_stamp = getTimeStamp()
+        request_id = getRequestID()
         if command == "register" or command == "r":
             position = 10
-            msg = "6f" + requestID + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "030100" + timeStamp + "0006010101020102"
+            msg = "6f" + request_id + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "030100" + time_stamp + "0006010101020102"
         elif command == "deregister" or command == "d":
             position = 10
-            msg = "73" + requestID + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "73" + request_id + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "resolve" or command == "e" or command == "eid":
             position = 2
-            msg = "71000000" + requestID + "b" * 40 + timeStamp
+            msg = "71000000" + request_id + "b" * 40 + time_stamp
         elif command == "resolve+tlv" or command == "tlv":
             position = 2
-            msg = "71000006" + requestID + "0" * EID_STR_LEN + timeStamp + "010101020102"
+            msg = "71000006" + request_id + "0" * EID_STR_LEN + time_stamp + "010101020102"
         elif command == "batchDeregister" or command == "batch-deregister" or command == "bd":
             position = 10
-            msg = "73" + requestID + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "73" + request_id + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "register_cid" or command == "rcid":
             position = 10
-            msg = "6f" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "030100" + timeStamp + "0000"
+            msg = "6f" + request_id + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "030100" + time_stamp + "0000"
         elif command == "deregister_cid" or command == "dcid":
             position = 10
-            msg = "73" + requestID + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "73" + request_id + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "resolve_cid" or command == "ecid":
             position = FLAG_ECID_QUERY
-            msg = "7100000000" + requestID + "b" * EID_STR_LEN + "0" * CID_STR_LEN + timeStamp
+            msg = "7100000000" + request_id + "b" * EID_STR_LEN + "0" * CID_STR_LEN + time_stamp
         elif command == "globalRegister" or command == "gr":
             position = 10
-            msg = "0b" + requestID + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0000"
+            msg = "0b" + request_id + "b" * EID_STR_LEN + "9" * NA_STR_LEN + "010100" + time_stamp + "0000"
         elif command == "globalResolve" or command == "ge":
             position = 2
-            msg = "0d000000" + requestID + "b" * EID_STR_LEN + timeStamp
+            msg = "0d000000" + request_id + "b" * EID_STR_LEN + time_stamp
         elif command == "globalDeregister" or command == "gd":
             position = 10
-            msg = "0f" + requestID + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "0f" + request_id + "00" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "globalBatchDeregister" or command == "gbd":
             position = 10
-            msg = "0f" + requestID + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "0f" + request_id + "01" + "b" * EID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "gcr":
             position = 10
-            msg = "0b" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + timeStamp + "0003010101"
+            msg = "0b" + request_id + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + "010100" + time_stamp + "0003010101"
         elif command == "gce":
             position = FLAG_ECID_QUERY
-            msg = "0d00000000" + requestID + "b" * EID_STR_LEN + "c" * CID_STR_LEN + timeStamp
+            msg = "0d00000000" + request_id + "b" * EID_STR_LEN + "c" * CID_STR_LEN + time_stamp
         elif command == "gcd":
             position = 10
-            msg = "0f" + requestID + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + timeStamp
+            msg = "0f" + request_id + "00" + "b" * EID_STR_LEN + "c" * CID_STR_LEN + "9" * NA_STR_LEN + time_stamp
         elif command == "rcc":
             position = 10
-            msg = "6f" + requestID + "b" * EID_STR_LEN + "1" * NA_STR_LEN + timeStamp
+            msg = "6f" + request_id + "b" * EID_STR_LEN + "1" * NA_STR_LEN + time_stamp
         elif command == "dcc":
             position = 10
-            msg = "73" + requestID + "b" * EID_STR_LEN + "1" * NA_STR_LEN + timeStamp
+            msg = "73" + request_id + "b" * EID_STR_LEN + "1" * NA_STR_LEN + time_stamp
         elif command == "qcc":
             position = FLAG_CUCKOO_QUERY
-            msg = "71" + requestID + "b" * EID_STR_LEN + timeStamp
+            msg = "71" + request_id + "b" * EID_STR_LEN + time_stamp
         elif command == "EIDQuery" or command == "eq":
             position = 2
-            msg = "71000000" + requestID + content + timeStamp
+            msg = "71000000" + request_id + content + time_stamp
         elif command == "EIDCIDQuery" or command == "ecq":
             position = FLAG_ECID_QUERY
             msg_type = content[:2]
-            queryType = content[2]
+            query_type = content[2]
             origin_content = content[3:]
-            if queryType == "0" or queryType == "1":
-                msg = msg_type + "00" + "0" + queryType + "0000" + requestID + origin_content + "0" * CID_STR_LEN + timeStamp
-            elif queryType == "2":
-                msg = msg_type + "00" + "02" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
-            elif queryType == "3":
-                msg = msg_type + "00" + "03" + "0000" + requestID + origin_content + timeStamp
-            elif queryType == "4":
+            if query_type == "0" or query_type == "1":
+                msg = msg_type + "00" + "0" + query_type + "0000" + request_id + origin_content + "0" * CID_STR_LEN + time_stamp
+            elif query_type == "2":
+                msg = msg_type + "00" + "02" + "0000" + request_id + "0" * EID_STR_LEN + origin_content + time_stamp
+            elif query_type == "3":
+                msg = msg_type + "00" + "03" + "0000" + request_id + origin_content + time_stamp
+            elif query_type == "4":
                 tlv_len = hex(int(len(origin_content) / 2))[2:]
                 tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
-                msg = msg_type + "00" + "04" + tlv_len_str + requestID + "0" * EID_CID_STR_LEN + timeStamp + origin_content
-            elif queryType == "5":
-                msg = msg_type + "00" + "05" + "0000" + requestID + "0" * EID_STR_LEN + origin_content + timeStamp
+                msg = msg_type + "00" + "04" + tlv_len_str + request_id + "0" * EID_CID_STR_LEN + time_stamp + origin_content
+            elif query_type == "5":
+                msg = msg_type + "00" + "05" + "0000" + request_id + "0" * EID_STR_LEN + origin_content + time_stamp
         elif command == "TagQuery" or command == "tq":
             tlv_len = hex(int(len(content) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 2
-            msg = "7100" + tlv_len_str + requestID + "0" * EID_STR_LEN + timeStamp + content
+            msg = "7100" + tlv_len_str + request_id + "0" * EID_STR_LEN + time_stamp + content
         elif command == "CuckooRegister" or command == "ccr":
             position = 10
-            msg = "6f" + requestID + content + timeStamp
+            msg = "6f" + request_id + content + time_stamp
         elif command == "CuckooDeregister" or command == "ccd":
             position = 10
-            msg = "73" + requestID + content + timeStamp
+            msg = "73" + request_id + content + time_stamp
         elif command == "CuckooQuery" or command == "ccq":
             position = FLAG_CUCKOO_QUERY
-            msg = "71" + requestID + content + timeStamp
+            msg = "71" + request_id + content + time_stamp
         elif command == "EIDRegister" or command == "er":
             eid_na = content[:EID_NA_STR_LEN]
             tlv = content[EID_NA_STR_LEN:]
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 10
-            msg = "6f" + requestID + eid_na + "030100" + timeStamp + tlv_len_str + tlv
+            msg = "6f" + request_id + eid_na + "030100" + time_stamp + tlv_len_str + tlv
         elif command == "EIDCIDRegister" or command == "ecr":
             msg_type = content[:2]
             eid_cid_na = content[2:EID_CID_NA_STR_LEN + 2]
@@ -538,28 +548,28 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
             tlv_len = hex(int(len(tlv) / 2))[2:]
             tlv_len_str = "0" * (4 - len(tlv_len)) + tlv_len
             position = 10
-            msg = msg_type + requestID + eid_cid_na + "030100" + timeStamp + tlv_len_str + tlv
+            msg = msg_type + request_id + eid_cid_na + "030100" + time_stamp + tlv_len_str + tlv
         elif command == "EIDDeregister" or command == "ed":
             position = 10
-            msg = "73" + requestID + "00" + content + timeStamp
+            msg = "73" + request_id + "00" + content + time_stamp
         elif command == "EIDCIDDeregister" or command == "ecd":
             msg_type = content[:2]
             position = 10
-            msg = msg_type + requestID + "00" + content[2:] + timeStamp
+            msg = msg_type + request_id + "00" + content[2:] + time_stamp
         elif command == "EIDBatchDeregister" or command == "ebd":
             position = 10
-            msg = "73" + requestID + "01" + "b" * EID_STR_LEN + content + timeStamp
+            msg = "73" + request_id + "01" + "b" * EID_STR_LEN + content + time_stamp
         elif command == "EIDCIDBatchDeregister" or command == "ecbd":
             position = 10
-            msg = "73" + requestID + "01" + "b" * EID_CID_STR_LEN + content + timeStamp
+            msg = "73" + request_id + "01" + "b" * EID_CID_STR_LEN + content + time_stamp
         elif command == "rnl":
             position = 10
-            msg = "0d" + requestID + timeStamp
+            msg = "0d" + request_id + time_stamp
         elif command == "connect" or command == "agent":
             position = 10
-            msg = "1d" + requestID + timeStamp
+            msg = "1d" + request_id + time_stamp
         elif command == "dm" or command == "delay-measure":
-            msg = "03" + timeStamp
+            msg = "03" + time_stamp
             position = FLAG_DELAY_MEASURE
         else:
             msg = ""
@@ -572,7 +582,7 @@ def getMsg(command: str, content: str = "", num: int = 1, flag_random_reqID: boo
 
 
 def show_details(receive_message: str):
-    # 注册响应报文
+    # Registration Response Message
     if receive_message[:2] == "70" or receive_message[:2] == "0c":
         request_id = receive_message[2:10]
         status_dict = {"01": "registered_successful", "02": "parameter_error", "03": "internal_error",
@@ -582,7 +592,7 @@ def show_details(receive_message: str):
         print("=== response details ===:\n[request_id]: {}, [register status]: {}, [timestamp]: {}".format(request_id,
                                                                                                            status,
                                                                                                            time_stamp))
-    # 注销响应报文
+    # Deregistration Response Message
     elif receive_message[:2] == "74" or receive_message[:2] == "10":
         request_id = receive_message[2:10]
         status_dict = {"01": "delete_successful", "02": "parameter_error", "03": "internal_error",
@@ -592,7 +602,7 @@ def show_details(receive_message: str):
         print("=== response details ===:\n[request_id]: {}, [deregister status]: {}, [timestamp]: {}".format(request_id,
                                                                                                              status,
                                                                                                              time_stamp))
-    # 解析响应报文
+    # Resolution Response Message
     elif receive_message[:2] == "72":
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
         status = status_dict[receive_message[2:4]]
@@ -609,21 +619,20 @@ def show_details(receive_message: str):
                                                 receive_message[index + 40:index + 72]))
             index += 72
 
-    # rnl响应报文 -客户端
+    # RNL Response Message - Client
     elif receive_message[:2] == "1e":
         request_id = receive_message[2:10]
         status_dict = {"01": "get_rnl_successful", "00": "get_rnl_failed"}
         status = status_dict[receive_message[10:12]]
         global_resolution_addr = receive_message[12:44]
         log_collection_system_addr = receive_message[44:76]
-        # 解析时延等级
+        # Resolution delay
         delay_level_number = int(receive_message[76:78], 16)
         level_delay_list = []
         p = 78
         for i in range(delay_level_number):
             level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4], 16)))
             p += 4
-        # 解析节点
         resolve_node_number = int(receive_message[p:p + 2])
         p += 2
         resolve_node_list = []
@@ -631,7 +640,6 @@ def show_details(receive_message: str):
             resolve_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                       int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        # 子节点
         child_node_number = int(receive_message[p:p + 2], 16)
         p += 2
         child_node_list = []
@@ -639,7 +647,7 @@ def show_details(receive_message: str):
             child_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                     int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        # 时延邻居节点
+        # delay_neighbor_node
         delay_neighbor_node_number = int(receive_message[p:p + 2], 16)
         p += 2
         delay_neighbor_node_list = []
@@ -647,7 +655,7 @@ def show_details(receive_message: str):
             delay_neighbor_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                              int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        # 地理邻居节点
+        # geo_neighbor_node
         geo_neighbor_node_number = int(receive_message[p:p + 2], 16)
         p += 2
         geo_neighbor_node_list = []
@@ -655,7 +663,7 @@ def show_details(receive_message: str):
             geo_neighbor_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                            int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        # 索引邻居节点
+        # index_neighbor_node
         index_neighbor_node_number = int(receive_message[p:p + 2], 16)
         p += 2
         index_neighbor_node_list = []
@@ -684,19 +692,17 @@ def show_details(receive_message: str):
         for i, node in enumerate(index_neighbor_node_list):
             print("[{}] ID:{}, NA:{}, level:{}, isReal:{}".format(i, node[0], node[1], node[2], node[3]))
 
-    # rnl响应报文 -接入代理
+    # RNL Response Message - Agent
     elif receive_message[:2] == "0e":
         request_id = receive_message[2:10]
         status_dict = {"01": "get_rnl_successful", "00": "get_rnl_failed"}
         status = status_dict[receive_message[10:12]]
-        # 解析时延等级
         delay_level_number = int(receive_message[12:14], 16)
         level_delay_list = []
         p = 14
         for i in range(delay_level_number):
             level_delay_list.append((int(receive_message[p:p + 2], 16), int(receive_message[p + 2:p + 4], 16)))
             p += 4
-        # 解析节点
         resolve_node_number = int(receive_message[p:p + 2])
         p += 2
         resolve_node_list = []
@@ -704,7 +710,6 @@ def show_details(receive_message: str):
             resolve_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                       int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        # 子节点
         child_node_number = int(receive_message[p:p + 2], 16)
         p += 2
         child_node_list = []
@@ -726,16 +731,16 @@ def show_details(receive_message: str):
 
 
 def show_details_ecid(receive_message: str):
-    # eid+cid 解析响应报文
+    # eid+cid resolve response message
     if receive_message[:2] not in ("72", "0e"):
         return
     status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
     content_len_dict = {"00": EID_NA_STR_LEN, "01": EID_CID_STR_LEN, "02": CID_NA_STR_LEN, "03": EID_CID_NA_STR_LEN,
                         "04": EID_CID_NA_STR_LEN, "05": EID_CID_STR_LEN}
     status = status_dict[receive_message[2:4]]
-    queryType = receive_message[4:6]
+    query_type = receive_message[4:6]
     try:
-        content_length = content_len_dict[queryType]
+        content_length = content_len_dict[query_type]
     except KeyError:
         print("ERROR! Unknown queryType")
     request_id = receive_message[10:18]
@@ -746,29 +751,29 @@ def show_details_ecid(receive_message: str):
                                                                                                       status,
                                                                                                       time_stamp))
     print("[resolving_entry_number]: {}".format(num))
-    if queryType == "00":
+    if query_type == "00":
         for i in range(num):
             print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + EID_STR_LEN],
                                                 receive_message[index + EID_STR_LEN:index + EID_NA_STR_LEN]))
             index += EID_NA_STR_LEN
-    elif queryType == "01":
+    elif query_type == "01":
         for i in range(num):
             print("[{}] EID: {}, CID: {}".format(i, receive_message[index:index + EID_STR_LEN],
                                                  receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN]))
             index += EID_CID_STR_LEN
-    elif queryType == "02":
+    elif query_type == "02":
         for i in range(num):
             print("[{}] CID: {}, NA: {}".format(i, receive_message[index:index + CID_STR_LEN],
                                                 receive_message[index + CID_STR_LEN:index + CID_NA_STR_LEN]))
             index += EID_CID_STR_LEN
-    elif queryType == "03" or queryType == "04":
+    elif query_type == "03" or query_type == "04":
         for i in range(num):
             print("[{}] EID: {}, CID: {}, NA: {}".format(i, receive_message[index:index + EID_STR_LEN],
                                                          receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN],
                                                          receive_message[
                                                          index + EID_CID_STR_LEN:index + EID_CID_NA_STR_LEN]))
             index += EID_CID_NA_STR_LEN
-    elif queryType == "05":
+    elif query_type == "05":
         for i in range(num):
             print("[{}] CID: {}, EID: {}".format(i, receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN],
                                                  receive_message[index:index + EID_STR_LEN]))
@@ -776,7 +781,7 @@ def show_details_ecid(receive_message: str):
 
 
 def show_details_cc_query(receive_message: str):
-    # 解析响应报文
+    # cuckoo filter based query response message
     if receive_message[:2] == "72":
         request_id = receive_message[2:10]
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
@@ -797,16 +802,16 @@ def show_details_cc_query(receive_message: str):
 def run():
     parser = getparser()
     args = parser.parse_args()
-    IP = args.ip
+    ip = args.ip
     port = args.port
-    ADDRESS = (IP, port)
-    family = checkIP(IP)  # check IPv4/IPv6
+    address = (ip, port)
+    family = checkIP(ip)  # check IPv4/IPv6
     command = args.command
-    infFlag = False
+    inf_flag = False
     number = args.number
     speed = args.speed
-    burstSize = args.burstSize
-    flag_random_requestID = args.ranReqID
+    burst_size = args.burstSize
+    flag_random_request_id = args.ranReqID
     seahash = SEAHash()
 
     if args.uriHash is not None:
@@ -815,44 +820,44 @@ def run():
         return
 
     elif args.EIDQuery is not None:
-        EID = args.EIDQuery
-        if len(EID) != EID_STR_LEN:
+        eid = args.EIDQuery
+        if len(eid) != EID_STR_LEN:
             print("EID length error!")
             return
-        msg, p = getMsg("EIDQuery", EID, number, flag_random_requestID)
+        msg, p = getMsg("EIDQuery", eid, number, flag_random_request_id)
 
     elif args.EIDCIDQuery is not None:
         m_type = "71"
         if len(args.EIDCIDQuery) == 3 and args.EIDCIDQuery[2] == 'g':
             m_type = "0d"
-        queryType = args.EIDCIDQuery[0]
+        query_type = args.EIDCIDQuery[0]
         content = args.EIDCIDQuery[1]
-        if ((queryType == "0" or queryType == "1") and len(content) == EID_STR_LEN) \
-                or (queryType == "2" and len(content) == CID_STR_LEN) \
-                or (queryType == "5" and len(content) == CID_STR_LEN) \
-                or (queryType == "3" and len(content) == EID_CID_STR_LEN) \
-                or (queryType == "4"):
-            content = m_type + queryType + content
+        if ((query_type == "0" or query_type == "1") and len(content) == EID_STR_LEN) \
+                or (query_type == "2" and len(content) == CID_STR_LEN) \
+                or (query_type == "5" and len(content) == CID_STR_LEN) \
+                or (query_type == "3" and len(content) == EID_CID_STR_LEN) \
+                or (query_type == "4"):
+            content = m_type + query_type + content
         else:
             print("invalid input <EID>/<CID>/<TAG> length error!")
             return
-        msg, p = getMsg("EIDCIDQuery", content, number, flag_random_requestID)
+        msg, p = getMsg("EIDCIDQuery", content, number, flag_random_request_id)
 
     elif args.TagQuery is not None:
         tlv_msg = args.TagQuery
-        msg, p = getMsg("TagQuery", tlv_msg, number, flag_random_requestID)
+        msg, p = getMsg("TagQuery", tlv_msg, number, flag_random_request_id)
 
     elif args.EIDRegister is not None:
         if len(args.EIDRegister) > 1:
-            EIDNA = args.EIDRegister[0]
+            eidna = args.EIDRegister[0]
             tag = args.EIDRegister[1]
         else:
-            EIDNA = args.EIDRegister[0]
+            eidna = args.EIDRegister[0]
             tag = ""
-        if len(EIDNA) != EID_NA_STR_LEN:
+        if len(eidna) != EID_NA_STR_LEN:
             print("EID+NA length error! Should be EID(40 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDRegister", EIDNA + tag, number, flag_random_requestID)
+        msg, p = getMsg("EIDRegister", eidna + tag, number, flag_random_request_id)
 
     elif args.EIDCIDRegister is not None:
         m_type = "6f"
@@ -861,22 +866,22 @@ def run():
             m_type = "0b"
             argc -= 1
         if argc > 1:
-            EIDCIDNA = args.EIDCIDRegister[0]
+            eidcidna = args.EIDCIDRegister[0]
             tag = args.EIDCIDRegister[1]
         else:
-            EIDCIDNA = args.EIDCIDRegister[0]
+            eidcidna = args.EIDCIDRegister[0]
             tag = ""
-        if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
+        if len(eidcidna) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDRegister", m_type + EIDCIDNA + tag, number, flag_random_requestID)
+        msg, p = getMsg("EIDCIDRegister", m_type + eidcidna + tag, number, flag_random_request_id)
 
     elif args.EIDDeregister is not None:
-        EIDNA = args.EIDDeregister
-        if len(EIDNA) != EID_NA_STR_LEN:
+        eidna = args.EIDDeregister
+        if len(eidna) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("EIDDeregister", EIDNA, number, flag_random_requestID)
+        msg, p = getMsg("EIDDeregister", eidna, number, flag_random_request_id)
 
     elif args.EIDCIDDeregister is not None:
         argc = len(args.EIDCIDDeregister)
@@ -884,51 +889,51 @@ def run():
         if argc == 2 and args.EIDCIDDeregister[1] == 'g':
             m_type = "0f"
             argc -= 1
-        EIDCIDNA = args.EIDCIDDeregister[0]
-        if len(EIDCIDNA) != EID_CID_NA_STR_LEN:
+        eidcidna = args.EIDCIDDeregister[0]
+        if len(eidcidna) != EID_CID_NA_STR_LEN:
             print("EID+CID+NA length error! Should be EID(40 hexStr) + CID(64 hexStr) + NA(32 hexStr)")
             return
-        msg, p = getMsg("EIDCIDDeregister", m_type + EIDCIDNA, number, flag_random_requestID)
+        msg, p = getMsg("EIDCIDDeregister", m_type + eidcidna, number, flag_random_request_id)
 
     elif args.EIDBatchDeregister is not None:
-        NA = args.EIDBatchDeregister
-        if len(NA) != 32:
+        na = args.EIDBatchDeregister
+        if len(na) != 32:
             print("NA length error!")
             return
-        msg, p = getMsg("EIDBatchDeregister", NA)
+        msg, p = getMsg("EIDBatchDeregister", na)
 
     elif args.EIDCIDBatchDeregister is not None:
-        NA = args.EIDCIDBatchDeregister
-        if len(NA) != 32:
+        na = args.EIDCIDBatchDeregister
+        if len(na) != 32:
             print("NA length error!")
             return
-        msg, p = getMsg("EIDCIDBatchDeregister", NA)
+        msg, p = getMsg("EIDCIDBatchDeregister", na)
 
     elif args.CuckooRegister is not None:
         uri = args.CuckooRegister[0]
         ip = args.CuckooRegister[1]
-        EIDNA = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
-        if len(EIDNA) != EID_NA_STR_LEN:
+        eidna = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
+        if len(eidna) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("CuckooRegister", EIDNA, number, flag_random_requestID)
+        msg, p = getMsg("CuckooRegister", eidna, number, flag_random_request_id)
 
     elif args.CuckooDeregister is not None:
         uri = args.CuckooDeregister[0]
         ip = args.CuckooDeregister[1]
-        EIDNA = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
-        if len(EIDNA) != EID_NA_STR_LEN:
+        eidna = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
+        if len(eidna) != EID_NA_STR_LEN:
             print("EID+NA length error!")
             return
-        msg, p = getMsg("CuckooDeregister", EIDNA, number, flag_random_requestID)
+        msg, p = getMsg("CuckooDeregister", eidna, number, flag_random_request_id)
 
     elif args.CuckooQuery is not None:
         uri = args.CuckooQuery
-        EID = seahash.get_SEA_Hash_EID(uri)
-        if len(EID) != EID_STR_LEN:
+        eid = seahash.get_SEA_Hash_EID(uri)
+        if len(eid) != EID_STR_LEN:
             print("EID length error!")
             return
-        msg, p = getMsg("CuckooQuery", EID, number, flag_random_requestID)
+        msg, p = getMsg("CuckooQuery", eid, number, flag_random_request_id)
 
     else:
         # batch register only for eid like: bbb...bb19210
@@ -949,7 +954,7 @@ def run():
                 command += "T"
                 extra_cm_num += 1
             if extra_cm_num == 0:
-                msg, p = getMsg(command, "", number, flag_random_requestID)
+                msg, p = getMsg(command, "", number, flag_random_request_id)
             else:
                 msg, p = getSequenceMsg(args.number, command, extra_cm_num)
         elif command == "custom":
@@ -959,7 +964,7 @@ def run():
                 return
             p = 0
         else:
-            msg, p = getMsg(command, "", number, flag_random_requestID)
+            msg, p = getMsg(command, "", number, flag_random_request_id)
     if msg == "" or len(msg) == 0:
         print("Getting message is none!")
         return
@@ -967,60 +972,62 @@ def run():
     s = socket.socket(family, socket.SOCK_DGRAM)
     s.settimeout(3)
     if number < 0:
-        infFlag = True
-    startMsgSendTime = time.time()
-    while not infFlag:
-        # 发送一批数据包
-        lastCheckTime = startMsgSendTime
+        inf_flag = True
+    start_msg_send_time = time.time()
+    while not inf_flag:
+        # send batch of packets
+        last_check_time = start_msg_send_time
         for i in range(number):
-            sendTimeStamp = time.time()
+            send_time_stamp = time.time()
             if type(msg) == str:
-                s.sendto(bytes.fromhex(msg), ADDRESS)
+                s.sendto(bytes.fromhex(msg), address)
             else:
-                s.sendto(bytes.fromhex(msg[i]), ADDRESS)
+                s.sendto(bytes.fromhex(msg[i]), address)
             if args.force:
                 if speed > 0:
-                    if number < 100000 and burstSize == 2000:
-                        if i != 0 and i % (number // 20) == 0:  # 100000个包以内,未设定bz则每发number/20个包调整一次时延，共调整20次。
-                            sleepTime = (number // 20) / speed - (time.time() - lastCheckTime)
-                            if sleepTime > 0:
-                                time.sleep(sleepTime)
-                            lastCheckTime = time.time()
+                    # If bz is not set within 100000 packets, the delay will be adjusted every 20 packets, 20 times in total.
+                    if number < 100000 and burst_size == 2000:
+                        if i != 0 and i % (number // 20) == 0:
+                            sleep_time = (number // 20) / speed - (time.time() - last_check_time)
+                            if sleep_time > 0:
+                                time.sleep(sleep_time)
+                            last_check_time = time.time()
                     else:
-                        if i != 0 and i % burstSize == 0:  # 100000个包以上每发burst_size个包调整一次时延，共调整number/burst_size次。
-                            sleepTime = burstSize / speed - (time.time() - lastCheckTime)
-                            if sleepTime > 0:
-                                time.sleep(sleepTime)
-                            lastCheckTime = time.time()
-                # 打印输出当前的发包速率
+                        # For more than 100,000 packets, the delay is adjusted once every burst size, number/burst_size times in total.
+                        if i != 0 and i % burst_size == 0:
+                            sleep_time = burst_size / speed - (time.time() - last_check_time)
+                            if sleep_time > 0:
+                                time.sleep(sleep_time)
+                            last_check_time = time.time()
+                # Print the current packet sending rate
                 if i != 0 and number <= 10000 and i % (number // 5) == 0:
-                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    delay = round((time.time() - start_msg_send_time) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 elif i != 0 and number <= 100000 and i % (number // 10) == 0:
-                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    delay = round((time.time() - start_msg_send_time) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 elif i != 0 and i % 20000 == 0:
-                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    delay = round((time.time() - start_msg_send_time) * 1000, 3)
                     pps = int(i / delay * 1000)
                     print("Already send " + str(i) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 continue
             try:
                 recv, addr = s.recvfrom(1024)
-                delay = round((time.time() - sendTimeStamp) * 1000, 3)
+                delay = round((time.time() - send_time_stamp) * 1000, 3)
                 if p == 0 or p == FLAG_DELAY_MEASURE:
-                    isSuccess = "success"
+                    is_success = "success"
                 elif p == FLAG_ECID_QUERY:
-                    isSuccess = "success" if recv.hex()[2:4] == "01" else "failed"
+                    is_success = "success" if recv.hex()[2:4] == "01" else "failed"
                 elif p == FLAG_CUCKOO_QUERY:
-                    isSuccess = "success" if recv.hex()[10:12] == "01" else "failed"
+                    is_success = "success" if recv.hex()[10:12] == "01" else "failed"
                 else:
-                    isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+                    is_success = "success" if recv.hex()[p:p + 2] == "01" else "failed"
                 if p == FLAG_DELAY_MEASURE:
-                    print("receive delay measure response msg, status: " + isSuccess + ", delay: " + str(delay) + "ms")
+                    print("receive delay measure response msg, status: " + is_success + ", delay: " + str(delay) + "ms")
                 else:
-                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + is_success)
                     if args.detail:
                         if p == FLAG_ECID_QUERY:
                             show_details_ecid(recv.hex())
@@ -1032,37 +1039,37 @@ def run():
                 print("Can't receive msg! Socket timeout")
         break
     else:
-        # 循环不间断发送数据包
+        # Send packets continuously in a loop
         if type(msg) != str:
             print('Error! "random requestID mode" / "sequence EID mode" only supported in limited packet numbers.')
             return
         count = 0
-        lastCheckTime = startMsgSendTime
+        last_check_time = start_msg_send_time
         while True:
-            s.sendto(bytes.fromhex(msg), ADDRESS)
+            s.sendto(bytes.fromhex(msg), address)
             count += 1
             if args.force:
-                if speed > 0 and count % burstSize == 0:
-                    sleepTime = burstSize / speed - (time.time() - lastCheckTime)
-                    if sleepTime > 0:
-                        time.sleep(sleepTime)
-                    lastCheckTime = time.time()
+                if speed > 0 and count % burst_size == 0:
+                    sleep_time = burst_size / speed - (time.time() - last_check_time)
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+                    last_check_time = time.time()
                 if count % (speed * 3) == 0:
-                    delay = round((time.time() - startMsgSendTime) * 1000, 3)
+                    delay = round((time.time() - start_msg_send_time) * 1000, 3)
                     pps = int(count / delay * 1000)
                     print("Already send " + str(count) + " packets, use: " + formatTime(delay) + " , pps: " + str(pps))
                 continue
             try:
                 recv, addr = s.recvfrom(1024)
                 if p != 0 and p != 9999:
-                    isSuccess = "success" if recv.hex()[p:p + 2] == "01" else "failed"
-                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + isSuccess)
+                    is_success = "success" if recv.hex()[p:p + 2] == "01" else "failed"
+                    print("receive msg from " + str(addr[:2]) + " : " + recv.hex() + ", status: " + is_success)
                 else:
                     print("receive delay measure response msg, status: success")
             except socket.timeout:
                 print("Can't receive msg! Socket timeout")
     if args.force:
-        delay = round((time.time() - startMsgSendTime) * 1000, 3)
+        delay = round((time.time() - start_msg_send_time) * 1000, 3)
         print("send " + str(number) + " packets successful, total use: " + str(delay) + "ms, pps: " +
               str(int(number / delay * 1000)))
     s.close()
