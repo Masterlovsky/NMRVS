@@ -56,6 +56,10 @@ def packet_creator(command: str, eid="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         pkt_bgp_eq = Ether(dst=dmac) / IPv6(nh=0x99, src=USER_NA, dst=BGP_NA) / IDP(
             destEID=int(eid, 16)) / IDPNRS(queryType="resolve", source="format1", na=int("0" * 40, 16))
         ret_pkt = pkt_bgp_eq
+    elif command == "beqz":
+        pkt_bgp_eq = Ether(dst=dmac) / IPv6(nh=0x99, src=USER_NA, dst=BGP_NA) / IDP(
+            destEID=int(eid, 16)) / IDPNRS(queryType="resolve", BGPType=1, source="format1", na=int("0" * 40, 16))
+        ret_pkt = pkt_bgp_eq
     elif command == "bd":
         payload_bgp_deregister = "73" + eid + ipv6ToHexString(USER_NA) + ipv6ToHexString(
             CONTROLLER_NA) + "00000001" + ipv6ToHexString(BGP_NA)
@@ -93,14 +97,14 @@ def main(command):
     #     "beq"), packet_creator("bd"), packet_creator("beq")]
 
     # *loop send different eid
-    eid_l = ["b" * (40 - len(str(i))) + str(i) for i in range(1000)]
+    eid_l = ["b" * (40 - len(str(i))) + str(i) for i in range(10000)]
     pkts = []
     bar = ShowProcess(len(eid_l) - 1)
     for eid in eid_l:
         bar.show_process()
         pkts.append(packet_creator(command, eid=eid))
     bar.close()
-    sendpfast(pkts, iface="p1p4", pps=1000)
+    sendpfast(pkts, iface="p1p4", pps=5000)
 
     pkt = packet_creator(command)
     # pkt = packet_creator("br", "a"*40)
@@ -119,4 +123,4 @@ if __name__ == '__main__':
     #     exit(1)
     # else:
     #     main(sys.argv[1])
-    main("eq")
+    main("beqz")
