@@ -7,12 +7,30 @@ Used to Analyze pcap files.
 from queue import Queue
 
 import yaml
-import pandas as pd
-import matplotlib.pyplot as plt
-from pyecharts import options as opts
-from pyecharts.charts import Line, Bar, Page
-from pyecharts.globals import ThemeType
-from scapy.all import *
+try:
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from pyecharts import options as opts
+    from pyecharts.charts import Line, Bar, Page
+    from pyecharts.globals import ThemeType
+    from scapy.all import *
+except ImportError as e:
+    print("Install the required packages first.")
+    try:
+        command_to_execute = "pip install pandas || easy_install pandas" + \
+                                " && pip install matplotlib || easy_install matplotlib" + \
+                                " && pip install pyecharts || easy_install pyecharts" + \
+                                " && pip install scapy || easy_install scapy"
+        os.system(command_to_execute)
+    except OSError:
+        print("Can NOT install required lib, Aborted! Please install it manually.")
+        sys.exit(1)
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from pyecharts import options as opts
+    from pyecharts.charts import Line, Bar, Page
+    from pyecharts.globals import ThemeType
+    from scapy.all import *
 
 
 class ShowProcess(object):

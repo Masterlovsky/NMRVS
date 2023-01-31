@@ -58,6 +58,13 @@ class ShowProcess(object):
 
 class SEAHash(object):
     def __init__(self, c_lib_path="./lib/lib_sea_eid.so") -> None:
+        # check lib_sea_eid.so exist
+        try:
+            with open(c_lib_path, "rb") as f:
+                pass
+        except FileNotFoundError:
+            print("lib_sea_eid.so not found! Please check the path of lib_sea_eid.so => default: /lib/lib_sea_eid.so")
+            sys.exit(1)
         self.lib_eid = CDLL(c_lib_path)
 
     def get_SEA_Hash_EID(self, uri: str) -> str:
