@@ -18,7 +18,7 @@ try:
     import netifaces
 except ImportError:
     try:
-        command_to_execute = "pip install netifaces || easy_install netifaces"
+        command_to_execute = "pip install netifaces -i https://pypi.tuna.tsinghua.edu.cn/simple || easy_install netifaces"
         os.system(command_to_execute)
     except OSError:
         print("Can NOT install netifaces, Aborted!")
