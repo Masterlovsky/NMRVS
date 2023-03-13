@@ -39,9 +39,7 @@ def execute(cmd, desc=""):
 
 
 def fast_check(_ip, _port):
-    with use_scope("clr", clear=True):
-        put_markdown("## 快速测试")
-        put_markdown("- 快速测试用于检测解析节点是否正常工作，不需要输入任何参数，脚本以默认参数执行。")
+    def fast_run():
         cmd = "python3 client.py -i {} -p {} -c rcid".format(_ip, _port)
         execute(cmd, "注册")
         cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
@@ -51,6 +49,10 @@ def fast_check(_ip, _port):
         cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
         execute(cmd, "解析2")
         put_success("快速测试完成")
+
+    put_markdown("## 快速测试")
+    put_markdown("- 快速测试用于检测解析节点是否正常工作，不需要输入任何参数，脚本以默认参数执行。")
+    put_button("run", onclick=fast_run, color="success")
 
 
 def normal_check(_ip, _port):
@@ -101,7 +103,7 @@ def normal_check(_ip, _port):
         else:
             cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        put_button("run", onclick=partial(execute, cmd))
+        put_button("run", onclick=partial(execute, cmd), color="success")
 
     def resolve():
         data = input_group("参数设置", [
@@ -145,7 +147,7 @@ def normal_check(_ip, _port):
         else:
             cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        put_button("run", onclick=partial(execute, cmd))
+        put_button("run", onclick=partial(execute, cmd), color="success")
 
     def deregister():
         data = input_group("参数设置", [
@@ -185,7 +187,7 @@ def normal_check(_ip, _port):
         else:
             cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        put_button("run", onclick=partial(execute, cmd))
+        put_button("run", onclick=partial(execute, cmd), color="success")
 
     def custom():
         data = input_group("自定义报文", [
@@ -195,7 +197,7 @@ def normal_check(_ip, _port):
         ])
         cmd = "python3 client.py -i {} -p {} -m {} -d".format(_ip, _port, data["msg"])
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        put_button("run", onclick=partial(execute, cmd))
+        put_button("run", onclick=partial(execute, cmd), color="success")
 
     global_flag = True if _port == '10090' else False
     put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True)
@@ -212,7 +214,7 @@ def get_ip_port():
                value="level1-10061", required=True),
     ])
     # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    put_markdown("**Server-IP**: {}，**port**: {}".format(data['ip'], data['port'].split('-')[1]), scope="main")
+    put_markdown("**Server-IP**: {}，**port**: {}".format(data['ip'], data['port'].split('-')[1]))
     return data['ip'], data['port'].split('-')[1]
 
 
@@ -224,8 +226,6 @@ def check_client():
 
 
 def main():
-    put_scope('clr')
-    put_scope('main')
     put_markdown("# NRS-client-GUI")
     check_client()
     version = os.popen("python3 client.py -v").read()
