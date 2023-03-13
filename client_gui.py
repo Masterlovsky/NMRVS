@@ -3,8 +3,10 @@
 """
 This script runs client GUI for NRS. Automatically call client.py execute.
 The front page is displayed at localhost:8082 in the browser.
+powered by masterlovsky. 2023/03/13
 """
 import os
+import subprocess
 import sys
 import socket
 import time
@@ -29,26 +31,26 @@ def get_time():
     return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 
+def execute(cmd, desc=""):
+    put_markdown("### 测试结果-{}".format(desc))
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    for line in iter(p.stdout.readline, b''):
+        put_text(line.decode().rstrip())
+
+
 def fast_check(_ip, _port):
-    put_markdown("## 快速测试")
-    put_markdown("- 快速测试用于检测解析节点是否正常工作，不需要输入任何参数，脚本以默认参数执行。")
-    cmd = "python3 client.py -i {} -p {} -c rcid".format(_ip, _port)
-    res = os.popen(cmd).read()
-    put_markdown("### 测试结果-注册")
-    put_text(res)
-    cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
-    res = os.popen(cmd).read()
-    put_markdown("### 测试结果-解析")
-    put_text(res)
-    cmd = "python3 client.py -i {} -p {} -c dcid".format(_ip, _port)
-    res = os.popen(cmd).read()
-    put_markdown("### 测试结果-注销")
-    put_text(res)
-    cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
-    res = os.popen(cmd).read()
-    put_markdown("### 测试结果-解析")
-    put_text(res)
-    put_success("快速测试完成")
+    with use_scope("clr", clear=True):
+        put_markdown("## 快速测试")
+        put_markdown("- 快速测试用于检测解析节点是否正常工作，不需要输入任何参数，脚本以默认参数执行。")
+        cmd = "python3 client.py -i {} -p {} -c rcid".format(_ip, _port)
+        execute(cmd, "注册")
+        cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
+        execute(cmd, "解析")
+        cmd = "python3 client.py -i {} -p {} -c dcid".format(_ip, _port)
+        execute(cmd, "注销")
+        cmd = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
+        execute(cmd, "解析2")
+        put_success("快速测试完成")
 
 
 def normal_check(_ip, _port):
@@ -61,17 +63,45 @@ def normal_check(_ip, _port):
             input('NA', name='na', type=TEXT, required=True, placeholder="0" * 32, value="0" * 32,
                   help_text="hex string in 32"),
             input('TLV', name='tlv', type=TEXT, placeholder="010101 for Tag1 of value{1}"),
-
+            checkbox("", name="extra", options=["开启扩展"]),
         ])
         if len(data["eid"]) != 40 or len(data["cid"]) != 64 or len(data["na"]) != 32:
             put_markdown("### 参数错误，请检查输入")
             return
+        data_ex = None
+        if data["extra"] == ["开启扩展"]:
+            # add new input_group to config number and speed
+            data_ex = input_group("扩展选项", [
+                checkbox("", name="force", options=["性能模式", "随机reqID"], value=["性能模式", "随机reqID"],
+                         inline=True),
+                checkbox("sequence-mode", name="sequence", options=["序列EID", "序列CID", "随机Tag"],
+                         value=[], inline=True),
+                input('number', name='number', type=NUMBER, placeholder="1", value="1"),
+                input('speed', name='speed', type=NUMBER, placeholder="-1(not limited)", value="-1"),
+                input('burst_size', name='burst', type=NUMBER, placeholder="2000", value="2000"),
+            ])
         cmd_str = data["eid"] + data["cid"] + data["na"] + " " + data["tlv"] + (" g" if global_flag else "")
-        cmd = "python3 client.py -i {} -p {} -ecr {} -d".format(_ip, _port, cmd_str)
+        cmd = "python3 client.py -i {} -p {} -ecr {}".format(_ip, _port, cmd_str)
+        if data_ex:
+            if "性能模式" in data_ex["force"]:
+                cmd += " --force"
+            if "随机reqID" in data_ex["force"]:
+                cmd += " --ranReqID"
+            if "序列EID" in data_ex["sequence"]:
+                cmd += " --seq"
+            if "序列CID" in data_ex["sequence"]:
+                cmd += " --seqc"
+            if "随机Tag" in data_ex["sequence"]:
+                cmd += " --seqT"
+            cmd += " -n {}".format(data_ex["number"])
+            cmd += " -s {}".format(data_ex["speed"])
+            cmd += " -b {}".format(data_ex["burst"])
+            if data_ex["number"] == 1:
+                cmd += " -d"
+        else:
+            cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        res = os.popen(cmd).read()
-        put_markdown("### 测试结果:")
-        put_text(res)
+        put_button("run", onclick=partial(execute, cmd))
 
     def resolve():
         data = input_group("参数设置", [
@@ -83,18 +113,39 @@ def normal_check(_ip, _port):
                   help_text="hex string in 64"),
             input('NA', name='na', type=TEXT, placeholder="(optional)",
                   help_text="hex string in 32"),
+            checkbox("", name="extra", options=["开启扩展"]),
         ])
         if ((data["type"] == "eid->ip" or data["type"] == "eid->cid") and len(data["eid"]) != 40) or (
                 (data["type"] == "cid->ip" or data["type"] == "cid->eid") and len(data["cid"]) != 64):
             put_markdown("### 参数错误，请检查输入")
             return
+        data_ex = None
+        if data["extra"] == ["开启扩展"]:
+            # add new input_group to config number and speed
+            data_ex = input_group("扩展选项", [
+                checkbox("", name="force", options=["性能模式", "随机reqID"], value=["性能模式", "随机reqID"],
+                         inline=True),
+                input('number', name='number', type=NUMBER, placeholder="1", value="1"),
+                input('speed', name='speed', type=NUMBER, placeholder="-1(not limited)", value="-1"),
+                input('burst_size', name='burst', type=NUMBER, placeholder="2000", value="2000"),
+            ])
         type_map = {"eid->ip": "0", "eid->cid": "1", "cid->ip": "2", "ecid->ip": "3", "tag->all": "4", "cid->eid": "5"}
         cmd_str = type_map[data["type"]] + " " + data["eid"] + data["cid"] + data["na"] + (" g" if global_flag else "")
-        cmd = "python3 client.py -i {} -p {} -ecq {} -d".format(_ip, _port, cmd_str)
+        cmd = "python3 client.py -i {} -p {} -ecq {}".format(_ip, _port, cmd_str)
+        if data_ex:
+            if "性能模式" in data_ex["force"]:
+                cmd += " --force"
+            if "随机reqID" in data_ex["force"]:
+                cmd += " --ranReqID"
+            cmd += " -n {}".format(data_ex["number"])
+            cmd += " -s {}".format(data_ex["speed"])
+            cmd += " -b {}".format(data_ex["burst"])
+            if data_ex["number"] == 1:
+                cmd += " -d"
+        else:
+            cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        res = os.popen(cmd).read()
-        put_markdown("### 测试结果:")
-        put_text(res)
+        put_button("run", onclick=partial(execute, cmd))
 
     def deregister():
         data = input_group("参数设置", [
@@ -104,27 +155,47 @@ def normal_check(_ip, _port):
                   help_text="hex string in 64"),
             input('NA', name='na', type=TEXT, required=True, placeholder="0" * 32, value="0" * 32,
                   help_text="hex string in 32"),
+            checkbox("", name="extra", options=["开启扩展"]),
         ])
         if len(data["eid"]) != 40 or len(data["cid"]) != 64 or len(data["na"]) != 32:
             put_markdown("### 参数错误，请检查输入")
             return
+        data_ex = None
+        if data["extra"] == ["开启扩展"]:
+            # add new input_group to config number and speed
+            data_ex = input_group("扩展选项", [
+                checkbox("", name="force", options=["性能模式", "随机reqID"], value=["性能模式", "随机reqID"],
+                         inline=True),
+                input('number', name='number', type=NUMBER, placeholder="1", value="1"),
+                input('speed', name='speed', type=NUMBER, placeholder="-1(not limited)", value="-1"),
+                input('burst_size', name='burst', type=NUMBER, placeholder="2000", value="2000"),
+            ])
         cmd_str = data["eid"] + data["cid"] + data["na"] + (" g" if global_flag else "")
-        cmd = "python3 client.py -i {} -p {} -ecd {} -d".format(_ip, _port, cmd_str)
+        cmd = "python3 client.py -i {} -p {} -ecd {}".format(_ip, _port, cmd_str)
+        if data_ex:
+            if "性能模式" in data_ex["force"]:
+                cmd += " --force"
+            if "随机reqID" in data_ex["force"]:
+                cmd += " --ranReqID"
+            cmd += " -n {}".format(data_ex["number"])
+            cmd += " -s {}".format(data_ex["speed"])
+            cmd += " -b {}".format(data_ex["burst"])
+            if data_ex["number"] == 1:
+                cmd += " -d"
+        else:
+            cmd += " -d"
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        res = os.popen(cmd).read()
-        put_markdown("### 测试结果:")
-        put_text(res)
+        put_button("run", onclick=partial(execute, cmd))
 
     def custom():
         data = input_group("自定义报文", [
             textarea('msg', name='msg', required=True, placeholder="hex string payload",
                      help_text="send a raw udp packet with message"),
+            checkbox("", name="extra", options=["开启扩展"]),
         ])
         cmd = "python3 client.py -i {} -p {} -m {} -d".format(_ip, _port, data["msg"])
         put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
-        res = os.popen(cmd).read()
-        put_markdown("### 测试结果:")
-        put_text(res)
+        put_button("run", onclick=partial(execute, cmd))
 
     global_flag = True if _port == '10090' else False
     put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True)
@@ -137,12 +208,12 @@ def advanced_check(_ip, _port):
 def get_ip_port():
     data = input_group("请输入解析节点IP地址和端口号", [
         input('IP', name='ip', type=TEXT, required=True),
-        input('端口号', name='port', type=NUMBER, required=True, value='10061',
-              help_text="level1-10061, level2-10062, level3-10063, global-10090"),
+        select('port', name='port', options=["level1-10061", "level2-10062", "level3-10063", "global-10090"],
+               value="level1-10061", required=True),
     ])
     # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    put_markdown("**Server-IP**: {}，**port**: {}".format(data['ip'], data['port']))
-    return data['ip'], data['port']
+    put_markdown("**Server-IP**: {}，**port**: {}".format(data['ip'], data['port'].split('-')[1]), scope="main")
+    return data['ip'], data['port'].split('-')[1]
 
 
 def check_client():
@@ -153,6 +224,8 @@ def check_client():
 
 
 def main():
+    put_scope('clr')
+    put_scope('main')
     put_markdown("# NRS-client-GUI")
     check_client()
     version = os.popen("python3 client.py -v").read()
@@ -165,4 +238,4 @@ def main():
 
 
 if __name__ == '__main__':
-    start_server(main, port=8082, auto_open_webbrowser=False)
+    start_server(main, port=8082, auto_open_webbrowser=True)
