@@ -200,10 +200,23 @@ def normal_check(_ip, _port):
         put_button("run", onclick=partial(execute, cmd), color="success")
 
     global_flag = True if _port == '10090' else False
-    put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True)
+    put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True, outline=True)
 
 
 def advanced_check(_ip, _port):
+    def rnl():
+        pass
+
+    def agent():
+        pass
+
+    def dm():
+        pass
+
+    def other():
+        pass
+
+    put_buttons(['RNL', '接入代理', '时延检测', '其他'], onclick=[rnl, agent, dm, other], group=True, outline=True)
     put_markdown("### 待开发...")
 
 
