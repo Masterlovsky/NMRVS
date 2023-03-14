@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 This script runs client GUI for NRS. Automatically call client.py execute.
-The front page is displayed at localhost:8082 in the browser.
+The front page is displayed at localhost:8080 in the browser.
 powered by masterlovsky. 2023/03/13
 """
 import os
@@ -22,7 +22,7 @@ except ImportError:
         print("Can NOT install pywebio, Aborted!")
         sys.exit(1)
 finally:
-    from pywebio import start_server
+    from pywebio import start_server, session
     from pywebio.input import *
     from pywebio.output import *
 
@@ -239,6 +239,7 @@ def check_client():
 
 
 def main():
+    session.set_env(title="NRS-client-GUI")
     put_markdown("# NRS-client-GUI")
     check_client()
     version = os.popen("python3 client.py -v").read()
@@ -251,4 +252,4 @@ def main():
 
 
 if __name__ == '__main__':
-    start_server(main, port=8082, auto_open_webbrowser=True)
+    start_server(main, port=8080, auto_open_webbrowser=True)
