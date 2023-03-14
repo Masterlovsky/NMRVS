@@ -21,4 +21,4 @@ typing-extensions==3.10.0.0
 wcwidth==0.2.5
 zipp==3.4.1
 scapy==2.4.5
-pywebio==1.7.1
+pywebio==1.6.3

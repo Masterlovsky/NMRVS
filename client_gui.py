@@ -16,15 +16,15 @@ try:
     import pywebio
 except ImportError:
     try:
-        command_to_execute = "pip install pywebio -i https://pypi.tuna.tsinghua.edu.cn/simple || easy_install pywebio"
+        command_to_execute = "pip install pywebio tornado -i https://pypi.tuna.tsinghua.edu.cn/simple || easy_install pywebio"
         os.system(command_to_execute)
     except OSError:
         print("Can NOT install pywebio, Aborted!")
         sys.exit(1)
-
-from pywebio import *
-from pywebio.input import *
-from pywebio.output import *
+finally:
+    from pywebio import start_server
+    from pywebio.input import *
+    from pywebio.output import *
 
 
 def get_time():
@@ -200,7 +200,7 @@ def normal_check(_ip, _port):
         put_button("run", onclick=partial(execute, cmd), color="success")
 
     global_flag = True if _port == '10090' else False
-    put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True, outline=True)
+    put_buttons(['注册', '解析', '注销', '自定义'], onclick=[register, resolve, deregister, custom], group=True)
 
 
 def advanced_check(_ip, _port):
