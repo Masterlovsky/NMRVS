@@ -6,6 +6,7 @@ The front page is displayed at localhost:8080 in the browser.
 powered by masterlovsky. 2023/03/13
 """
 import os
+import signal
 import subprocess
 import sys
 import socket
@@ -25,6 +26,12 @@ finally:
     from pywebio import start_server, session
     from pywebio.input import *
     from pywebio.output import *
+
+
+# Interrupt Signal Handling
+def term_sig_handler(signum, frame):
+    print("Interrupted by signal %d, NRS-client-GUI exit. Goodbye" % signum)
+    sys.exit(0)
 
 
 def get_time():
@@ -252,4 +259,7 @@ def main():
 
 
 if __name__ == '__main__':
+    print(" -- WELCOME TO NRS-client-GUI -- ")
+    signal.signal(signal.SIGINT, term_sig_handler)
+    signal.signal(signal.SIGTERM, term_sig_handler)
     start_server(main, port=8080, auto_open_webbrowser=True)
