@@ -294,8 +294,8 @@ def main():
                 onclick=[partial(fast_check, ip, port), partial(normal_check, ip, port),
                          partial(advanced_check, ip, port)])
     put_scope("second", position=10)
-    put_scope("third", position=15)
-    put_scope("result", position=20)
+    put_scope("third", position=20)
+    put_scope("result", position=50)
 
 
 if __name__ == '__main__':
