@@ -12,7 +12,7 @@ import time
 import uuid
 from ctypes import *
 
-VERSION = "2.1"
+VERSION = "2.2"
 EID_STR_LEN = 40
 NA_STR_LEN = 32
 CID_STR_LEN = 64
@@ -57,6 +57,7 @@ class ShowProcess(object):
 
 
 class SEAHash(object):
+
     def __init__(self, c_lib_path="./lib/lib_sea_eid.so") -> None:
         # check lib_sea_eid.so exist
         try:
@@ -819,9 +820,9 @@ def run():
     speed = args.speed
     burst_size = args.burstSize
     flag_random_request_id = args.ranReqID
-    seahash = SEAHash()
 
     if args.uriHash is not None:
+        seahash = SEAHash()
         eid = seahash.get_SEA_Hash_EID(args.uriHash)
         print('[SEAHash] uri: "{}", EID: {}'.format(args.uriHash, eid))
         return
@@ -917,6 +918,7 @@ def run():
         msg, p = getMsg("EIDCIDBatchDeregister", na)
 
     elif args.CuckooRegister is not None:
+        seahash = SEAHash()
         uri = args.CuckooRegister[0]
         ip = args.CuckooRegister[1]
         eidna = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
@@ -926,6 +928,7 @@ def run():
         msg, p = getMsg("CuckooRegister", eidna, number, flag_random_request_id)
 
     elif args.CuckooDeregister is not None:
+        seahash = SEAHash()
         uri = args.CuckooDeregister[0]
         ip = args.CuckooDeregister[1]
         eidna = seahash.get_SEA_Hash_EID(uri) + ip2NAStr(ip)
@@ -935,6 +938,7 @@ def run():
         msg, p = getMsg("CuckooDeregister", eidna, number, flag_random_request_id)
 
     elif args.CuckooQuery is not None:
+        seahash = SEAHash()
         uri = args.CuckooQuery
         eid = seahash.get_SEA_Hash_EID(uri)
         if len(eid) != EID_STR_LEN:
