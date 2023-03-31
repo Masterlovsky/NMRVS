@@ -102,7 +102,8 @@ def normal_check(_ip, _port):
                     input('burst_size', name='burst', type=NUMBER, placeholder="2000", value="2000"),
                 ])
             cmd_str = data["eid"] + data["cid"] + data["na"] + " " + data["tlv"] + (" g" if global_flag else "")
-            cmd = "python3 client.py -i {} -p {} -ecr {}".format(_ip, _port, cmd_str)
+            cmd = "python3 client.py -i {} -p {}".format(_ip, _port)
+            rcid_flag = False
             if data_ex:
                 if "性能模式" in data_ex["force"]:
                     cmd += " --force"
@@ -110,10 +111,17 @@ def normal_check(_ip, _port):
                     cmd += " --ranReqID"
                 if "序列EID" in data_ex["sequence"]:
                     cmd += " --seq"
+                    rcid_flag = True
                 if "序列CID" in data_ex["sequence"]:
                     cmd += " --seqc"
+                    rcid_flag = True
                 if "随机Tag" in data_ex["sequence"]:
                     cmd += " --seqT"
+                    rcid_flag = True
+                if rcid_flag:
+                    cmd += " -c rcid"
+                else:
+                    cmd += " -ecr {}".format(cmd_str)
                 cmd += " -n {}".format(data_ex["number"])
                 cmd += " -s {}".format(data_ex["speed"])
                 cmd += " -b {}".format(data_ex["burst"])
