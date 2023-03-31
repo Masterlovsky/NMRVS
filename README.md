@@ -89,6 +89,10 @@ $ python3 topoShow.py
 # Run the following command：
 
 $ python3 client.py -i <IP> -p <port> <...args...>
+
+# You can use client_gui.py to open a web page in browser to send packets easily.
+
+$ python3 client_gui.py
 ``` 
 
 - 参数设定：
