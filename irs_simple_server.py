@@ -39,6 +39,11 @@ def get_req_type(req):
     return req[0:2]
 
 
+def check_is_IP6(IP):
+    # check if IP is ipv6
+    return ":" in IP
+
+
 def handle_register_request(req):
     # req packet: "6f" + request_id(4 bytes) + EID(20 bytes) + CID(32 bytes) + NA(16 bytes) + latency(1 byte) + ttl(1 bytes) + mflag(1 byte) + timestamp(4 bytes) + tlv_len(2 bytes) + tlv(0-1024 bytes)
     # resp packet: "70" + request_id(4 bytes) + status(1 byte) + timestamp(4 bytes)
@@ -133,8 +138,11 @@ def handle_deregister_request(req):
 
 class UDP_SERVER(object):
 
-    def __init__(self, IP, PORT):
-        self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def __init__(self, ip, port):
+        if check_is_IP6(IP):
+            self.server = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        else:
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.server.bind((IP, PORT))
         self.server.settimeout(5)
         self.running = True
@@ -182,7 +190,7 @@ def _test():
     print(handle_resolve_request(test_req).hex())
 
 
-def signal_handler(signal, frame):
+def signal_handler(sig, frame):
     print("Signal {} cached, Stop server...".format(signal))
     server.close()
     sys.exit(0)
