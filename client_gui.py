@@ -302,7 +302,7 @@ def main():
     session.set_env(title="NRS-client-GUI")
     put_markdown("# NRS-client-GUI")
     check_client()
-    version = "v2.2"
+    version = "v2.3"
     put_markdown("> client version: {}".format(version))
     put_markdown("**Date**: {} | **ClientIP**: {}".format(get_time(), socket.gethostbyname(socket.gethostname())))
     ip, port = get_ip_port()
