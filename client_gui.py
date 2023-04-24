@@ -57,13 +57,20 @@ def execute_for_fast(cmd_list, desc_list=[""] * 4):
 
 def fast_check(_ip, _port):
     def fast_run():
-        cmd1 = "python3 client.py -i {} -p {} -c rcid".format(_ip, _port)
-        cmd2 = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
-        cmd3 = "python3 client.py -i {} -p {} -c dcid".format(_ip, _port)
-        cmd4 = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
+        if global_flag:
+            cmd1 = "python3 client.py -i {} -p {} -c gcr".format(_ip, _port)
+            cmd2 = "python3 client.py -i {} -p {} -c gce".format(_ip, _port)
+            cmd3 = "python3 client.py -i {} -p {} -c gcd".format(_ip, _port)
+            cmd4 = "python3 client.py -i {} -p {} -c gce".format(_ip, _port)
+        else:
+            cmd1 = "python3 client.py -i {} -p {} -c rcid".format(_ip, _port)
+            cmd2 = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
+            cmd3 = "python3 client.py -i {} -p {} -c dcid".format(_ip, _port)
+            cmd4 = "python3 client.py -i {} -p {} -c ecid".format(_ip, _port)
         execute_for_fast([cmd1, cmd2, cmd3, cmd4], ["注册", "解析", "注销", "解析2"])
         put_success("快速测试完成", scope="result")
 
+    global_flag = True if _port == '10090' else False
     with use_scope("second", clear=True):
         clear("result")
         clear("third")
@@ -118,10 +125,7 @@ def normal_check(_ip, _port):
                 if "随机Tag" in data_ex["sequence"]:
                     cmd += " --seqT"
                     rcid_flag = True
-                if rcid_flag:
-                    cmd += " -c rcid"
-                else:
-                    cmd += " -ecr {}".format(cmd_str)
+
                 cmd += " -n {}".format(data_ex["number"])
                 cmd += " -s {}".format(data_ex["speed"])
                 cmd += " -b {}".format(data_ex["burst"])
@@ -129,6 +133,10 @@ def normal_check(_ip, _port):
                     cmd += " -d"
             else:
                 cmd += " -d"
+            if rcid_flag:
+                cmd += " -c rcid"
+            else:
+                cmd += " -ecr {}".format(cmd_str)
             put_markdown("Generate command: \n ```shell \n {} \n ``` \n".format(cmd))
             put_button("run", onclick=partial(execute, cmd, "注册"), color="success")
 
