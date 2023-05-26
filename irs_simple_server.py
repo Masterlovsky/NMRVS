@@ -3,13 +3,14 @@
 """
 This script is a simple server for the Enhanced Name Resolution System.
 Only for client functionally testing. Not for production use and performance.
-Powered by Masterlovsky, 2023.04.01. Version 0.1.0
+Powered by Masterlovsky, 2023.04.01.
+2023.5.26, update to Version 0.2
 """
 import signal
 import sys
 import socket
 import threading
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import time
 
 VERSION = "0.1.0"
@@ -20,12 +21,34 @@ QUERY_REQUEST = "71"
 QUERY_RESPONSE = "72"
 DEREGISTER_REQUEST = "73"
 DEREGISTER_RESPONSE = "74"
+
+
+class OrderedSet(object):
+    def __init__(self):
+        self.dict = OrderedDict()
+
+    def add(self, value):
+        self.dict[value] = None
+
+    def remove(self, value):
+        self.dict.pop(value)
+
+    def __contains__(self, value):
+        return value in self.dict
+
+    def __len__(self):
+        return len(self.dict)
+
+    def __iter__(self):
+        return iter(self.dict.keys())
+
+
 # create dict for EID(str) -> NA(set)
-EID2NA = defaultdict(set)
-CID2NA = defaultdict(set)
-EID2CID = defaultdict(set)
-ECID2NA = defaultdict(set)
-CID2EID = defaultdict(set)
+EID2NA = defaultdict(OrderedSet)
+CID2NA = defaultdict(OrderedSet)
+EID2CID = defaultdict(OrderedSet)
+ECID2NA = defaultdict(OrderedSet)
+CID2EID = defaultdict(OrderedSet)
 
 
 # todo: create dict for tag query
