@@ -2,6 +2,7 @@
 """
 By mzl 2021.06.23 version 1.0
 Used to Analyze pcap files.
+update to version 1.1 2023.06.16
 """
 
 from queue import Queue
@@ -233,6 +234,7 @@ def getRequestID(payload: str):
 
 
 def analyzeDelay(_delay_list: list, time_out: float):
+    global send_req_total
     n = len(_delay_list)
     max_delay = max(_delay_list)
     min_delay = min(_delay_list)
@@ -246,13 +248,15 @@ def analyzeDelay(_delay_list: list, time_out: float):
             timeout_n += 1
     pbar.close()
     average_delay = total / n
-    print("packet-pair number: {}, min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
-          .format(n, min_delay, max_delay, average_delay, timeout_n))
+    print("min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
+          .format(min_delay, max_delay, average_delay, timeout_n))
+    print("packet_pair_number:{}, packet_loss_rate: {:.2f}%".format(n, (1 - n / send_req_total) * 100))
     return average_delay
 
 
 def analyzeDelayInfo(pkt: Packet):
     global processed_pkt_num
+    global send_req_total
     processed_pkt_num += 1
     if processed_pkt_num % 5000 == 0:
         print("Already read {} packets...".format(processed_pkt_num))
@@ -263,10 +267,14 @@ def analyzeDelayInfo(pkt: Packet):
         return
     if pkt_type in ("6f", "71", "73", "0d", "0b", "0f"):
         pkt_pair_time_dict[requestID].put(pkt.time)
+        send_req_total += 1
     # If it is a response message, pop the requestID and corresponding time stamp out and calculate time delay
     if pkt_type in ("70", "72", "74", "0e", "0c", "10"):
         if requestID in pkt_pair_time_dict.keys():
             delay = 1000 * (pkt.time - pkt_pair_time_dict.get(requestID).get())  # delay: ms
+            if delay < 0:
+                print("Warning, delay is less than 0, delay: {:.3f}ms, pkt info: {}".format(delay, pkt.summary()))
+                return
             delay_list.append(delay)
 
 
@@ -303,6 +311,7 @@ if __name__ == '__main__':
     delay_list = []
     pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
     processed_pkt_num = 0
+    send_req_total = 0
     run()
     draw_time_seq_line(delay_list, timeout)
     draw_dist_bar(delay_list, dist_bins)
