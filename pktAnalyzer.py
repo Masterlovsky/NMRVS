@@ -8,6 +8,7 @@ update to version 1.1 2023.06.16
 from queue import Queue
 
 import yaml
+
 try:
     import pandas as pd
     import matplotlib.pyplot as plt
@@ -18,10 +19,12 @@ try:
 except ImportError as e:
     print("Install the required packages first.")
     try:
+        import os
+
         command_to_execute = "pip install pandas || easy_install pandas" + \
-                                " && pip install matplotlib || easy_install matplotlib" + \
-                                " && pip install pyecharts || easy_install pyecharts" + \
-                                " && pip install scapy || easy_install scapy"
+                             " && pip install matplotlib || easy_install matplotlib" + \
+                             " && pip install pyecharts || easy_install pyecharts" + \
+                             " && pip install scapy || easy_install scapy"
         os.system(command_to_execute)
     except OSError:
         print("Can NOT install required lib, Aborted! Please install it manually.")
@@ -250,7 +253,7 @@ def analyzeDelay(_delay_list: list, time_out: float):
     average_delay = total / n
     print("min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
           .format(min_delay, max_delay, average_delay, timeout_n))
-    print("packet_pair_number:{}, packet_loss_rate: {:.2f}%".format(n, (1 - n / send_req_total) * 100))
+    print("packet_pair_number:{}, packet_loss_rate: {:.3f}%".format(n, (1 - n / send_req_total) * 100))
     return average_delay
 
 
