@@ -254,7 +254,7 @@ def analyzeDelay(_delay_list: list, time_out: float):
     print("min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
           .format(min_delay, max_delay, average_delay, timeout_n))
     print("packet_pair_number:{}, packet_loss_rate: {:.3f}%, QPS: {}".format(n, (1 - n / send_req_total) * 100,
-                                                                             n / (last_pkt_time - first_pkt_time)))
+                                                                             int(n / (last_pkt_time - first_pkt_time))))
     return average_delay
 
 
