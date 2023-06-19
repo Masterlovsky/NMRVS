@@ -237,7 +237,7 @@ def getRequestID(payload: str):
 
 
 def analyzeDelay(_delay_list: list, time_out: float):
-    global send_req_total
+    global send_req_total, first_pkt_time, last_pkt_time
     n = len(_delay_list)
     max_delay = max(_delay_list)
     min_delay = min(_delay_list)
@@ -253,14 +253,21 @@ def analyzeDelay(_delay_list: list, time_out: float):
     average_delay = total / n
     print("min_delay: {:.3f}ms, max_delay: {:.3f}ms, average_delay: {:.4f}ms, timeout_n: {}"
           .format(min_delay, max_delay, average_delay, timeout_n))
-    print("packet_pair_number:{}, packet_loss_rate: {:.3f}%".format(n, (1 - n / send_req_total) * 100))
+    print("packet_pair_number:{}, packet_loss_rate: {:.3f}%, QPS: {}".format(n, (1 - n / send_req_total) * 100,
+                                                                             n / (last_pkt_time - first_pkt_time)))
     return average_delay
 
 
 def analyzeDelayInfo(pkt: Packet):
     global processed_pkt_num
     global send_req_total
+    global first_pkt_time, last_pkt_time
     processed_pkt_num += 1
+    if processed_pkt_num == 1:
+        # record first packet time
+        first_pkt_time = pkt.time
+    # record last packet time
+    last_pkt_time = pkt.time
     if processed_pkt_num % 5000 == 0:
         print("Already read {} packets...".format(processed_pkt_num))
     pkt_type = getPacketTypeFromPacket(pkt)
@@ -315,6 +322,8 @@ if __name__ == '__main__':
     pkt_pair_time_dict = defaultdict(Queue)  # key: requestID； value: a queue of timestamp
     processed_pkt_num = 0
     send_req_total = 0
+    first_pkt_time = 0
+    last_pkt_time = 0
     run()
     draw_time_seq_line(delay_list, timeout)
     draw_dist_bar(delay_list, dist_bins)
