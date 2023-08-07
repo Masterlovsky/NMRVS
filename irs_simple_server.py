@@ -5,6 +5,7 @@ This script is a simple server for the Enhanced Name Resolution System.
 Only for client functionally testing. Not for production use and performance.
 Powered by Masterlovsky, 2023.04.01.
 2023.5.26, update to Version 0.2
+2023.8.07, update to Version 0.3
 """
 import signal
 import sys
@@ -13,7 +14,7 @@ import threading
 from collections import defaultdict, OrderedDict
 import time
 
-VERSION = "0.1.0"
+VERSION = "0.3.0"
 # define packet header
 REGISTER_REQUEST = "6f"
 REGISTER_RESPONSE = "70"
@@ -21,6 +22,12 @@ QUERY_REQUEST = "71"
 QUERY_RESPONSE = "72"
 DEREGISTER_REQUEST = "73"
 DEREGISTER_RESPONSE = "74"
+G_REGISTER_REQUEST = "0b"
+G_REGISTER_RESPONSE = "0c"
+G_QUERY_REQUEST = "0d"
+G_QUERY_RESPONSE = "0e"
+G_DEREGISTER_REQUEST = "0f"
+G_DEREGISTER_RESPONSE = "10"
 
 
 class OrderedSet(object):
@@ -84,7 +91,8 @@ def handle_register_request(req):
         ECID2NA[eid + cid].add(na)
     status = "01"
     timestamp = get_ms_timestamp_str()
-    resp = REGISTER_RESPONSE + request_id + status + timestamp
+    res_type = REGISTER_RESPONSE if req[0:2] == REGISTER_REQUEST else G_REGISTER_RESPONSE
+    resp = res_type + request_id + status + timestamp
     return bytes.fromhex(resp)
 
 
@@ -97,7 +105,8 @@ def handle_resolve_request(req):
     timestamp = get_ms_timestamp_str()
     eid = req[18:58]
     cid = req[58:122]
-    resp = QUERY_RESPONSE + status + query_type + "01" + "00" + request_id + timestamp
+    resp_type = QUERY_RESPONSE if req[0:2] == QUERY_REQUEST else G_QUERY_RESPONSE
+    resp = resp_type + status + query_type + "01" + "00" + request_id + timestamp
     if query_type == "00":
         # EID -> NA
         res_list = EID2NA[eid]
@@ -147,15 +156,41 @@ def handle_deregister_request(req):
     cid = req[52:116]
     na = req[116:148]
     if pad == "00":
-        EID2NA[eid].remove(na)
+        if eid != "0" * 40:
+            EID2NA[eid].remove(na)
+        if cid != "0" * 64:
+            CID2NA[cid].remove(na)
+        if eid != "0" * 40 and cid != "0" * 64:
+            EID2CID[eid].remove(cid)
+            CID2EID[cid].remove(eid)
+            ECID2NA[eid + cid].remove(na)
     elif pad == "01":
         # get all eid with na in na_list
         for eid in EID2NA:
             if na in EID2NA[eid]:
                 EID2NA[eid].remove(na)
+        # get all cid with na in na_list
+        for cid in CID2NA:
+            if na in CID2NA[cid]:
+                CID2NA[cid].remove(na)
+        # get all eid+cid with na in na_list
+        for ecid in ECID2NA:
+            if na in ECID2NA[ecid]:
+                ECID2NA[ecid].remove(na)
+        # get all eid with na in na_list
+        for eid in EID2CID:
+            if cid in EID2CID[eid]:
+                EID2CID[eid].remove(cid)
+        # get all cid with na in na_list
+        for cid in CID2EID:
+            if eid in CID2EID[cid]:
+                CID2EID[cid].remove(eid)
+    else:
+        print("Error: unknown pad")
     status = "01"
     timestamp = get_ms_timestamp_str()
-    resp = DEREGISTER_RESPONSE + request_id + status + timestamp
+    resp_type = DEREGISTER_RESPONSE if req[0:2] == DEREGISTER_REQUEST else G_DEREGISTER_RESPONSE
+    resp = resp_type + request_id + status + timestamp
     return bytes.fromhex(resp)
 
 
@@ -188,13 +223,13 @@ class UDP_SERVER(object):
 
     def process_packet(self, data, addr):
         req_type = get_req_type(data)
-        if req_type == REGISTER_REQUEST:
+        if req_type == REGISTER_REQUEST or req_type == G_REGISTER_REQUEST:
             resp = handle_register_request(data)
             self.server.sendto(resp, addr)
-        elif req_type == QUERY_REQUEST:
+        elif req_type == QUERY_REQUEST or req_type == G_QUERY_REQUEST:
             resp = handle_resolve_request(data)
             self.server.sendto(resp, addr)
-        elif req_type == DEREGISTER_REQUEST:
+        elif req_type == DEREGISTER_REQUEST or req_type == G_DEREGISTER_REQUEST:
             resp = handle_deregister_request(data)
             self.server.sendto(resp, addr)
         else:
