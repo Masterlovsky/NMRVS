@@ -11,6 +11,7 @@ import signal
 import sys
 import socket
 import threading
+import ipaddress
 from collections import defaultdict, OrderedDict
 import time
 
@@ -71,7 +72,11 @@ def get_req_type(req):
 
 def check_is_IP6(IP):
     # check if IP is ipv6
-    return ":" in IP
+    try:
+        ipaddress.IPv6Address(IP)
+        return True
+    except ipaddress.AddressValueError:
+        return False
 
 
 def handle_register_request(req):

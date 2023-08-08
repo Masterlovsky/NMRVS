@@ -2,7 +2,7 @@
 """
 BY Masterlovsky 2021.06.09 version 1.0
 Used to send message to NMR nodes
-Update 2023.1.5 version 2.1
+update 2023.8.8 version 2.3
 """
 import argparse
 import sys
@@ -10,9 +10,10 @@ import random
 import socket
 import time
 import uuid
+import ipaddress
 from ctypes import *
 
-VERSION = "2.2"
+VERSION = "2.3"
 EID_STR_LEN = 40
 NA_STR_LEN = 32
 CID_STR_LEN = 64
@@ -111,9 +112,44 @@ def ip2NAStr(ip: str) -> str:
     return result
 
 
+def na_to_ip(na_str: str) -> str:
+    # Handle NA_STR(32 len hex string) and return IP address
+    result = ""
+    if na_str == "":
+        return result
+    if len(na_str) == 32:
+        if na_str[0:24] == "0" * 24:
+            for i in range(0, 32, 4):
+                result += str(int(na_str[i:i + 4], 16)) + "."
+            result = result[:-1]
+        else:
+            for i in range(0, 32, 4):
+                result += na_str[i:i + 4] + ":"
+            result = result[:-1]
+    else:
+        result = na_str
+
+    # check if result is a valid ip address
+    try:
+        result_ip = ipaddress.ip_address(result)
+        return str(result_ip.compressed)
+    except ValueError:
+        # print("NA_STR not a valid IP address!")
+        return na_str
+
+
 def getTimeStamp() -> str:
-    time_stamp = int(time.time())
+    # get ms time stamp
+    time_stamp = int(time.time() * 1000)
     return hex(time_stamp)[-8:]
+
+
+def hex_ms_tm_to_real(ms_time_hex: str) -> str:
+    # convert ms hex time stamp to real time
+    ms_hex_tm_full = "0x" + "189" + ms_time_hex
+    ms_hex_tm = int(ms_hex_tm_full, 16)
+    real_tm = time.strftime("%Y-%m-%d %H:%M:%S.{}".format(ms_hex_tm % 1000), time.localtime(ms_hex_tm // 1000))
+    return real_tm
 
 
 def getparser():
@@ -596,7 +632,7 @@ def show_details(receive_message: str):
         status_dict = {"01": "registered_successful", "02": "parameter_error", "03": "internal_error",
                        "04": "storage_is_full", "05": "other_errors"}
         status = status_dict[receive_message[10:12]]
-        time_stamp = receive_message[12:20]
+        time_stamp = hex_ms_tm_to_real(receive_message[12:20])
         print("=== response details ===:\n[request_id]: {}, [register status]: {}, [timestamp]: {}".format(request_id,
                                                                                                            status,
                                                                                                            time_stamp))
@@ -606,7 +642,7 @@ def show_details(receive_message: str):
         status_dict = {"01": "delete_successful", "02": "parameter_error", "03": "internal_error",
                        "04": "storage_is_full", "05": "other_errors"}
         status = status_dict[receive_message[10:12]]
-        time_stamp = receive_message[12:20]
+        time_stamp = hex_ms_tm_to_real(receive_message[12:20])
         print("=== response details ===:\n[request_id]: {}, [deregister status]: {}, [timestamp]: {}".format(request_id,
                                                                                                              status,
                                                                                                              time_stamp))
@@ -615,7 +651,7 @@ def show_details(receive_message: str):
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
         status = status_dict[receive_message[2:4]]
         request_id = receive_message[8:16]
-        time_stamp = receive_message[16:24]
+        time_stamp = hex_ms_tm_to_real(receive_message[16:24])
         num = int(receive_message[24:28], 16)
         index = 28
         print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timestamp]: {}".format(request_id,
@@ -623,8 +659,9 @@ def show_details(receive_message: str):
                                                                                                           time_stamp))
         print("[resolving_entry_number]: {}".format(num))
         for i in range(num):
-            print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + 40],
-                                                receive_message[index + 40:index + 72]))
+            eid = receive_message[index:index + 40]
+            na = receive_message[index + 40:index + 72]
+            print("[{}] EID: {}, NA: {}".format(i, eid, na_to_ip(na)))
             index += 72
 
     # RNL Response Message - Client
@@ -725,7 +762,7 @@ def show_details(receive_message: str):
             child_node_list.append((receive_message[p:p + 8], receive_message[p + 8:p + 40],
                                     int(receive_message[p + 40:p + 42], 16), receive_message[p + 42:p + 44]))
             p += 44
-        time_stamp = receive_message[p:p + 8]
+        time_stamp = hex_ms_tm_to_real(receive_message[p:p + 8])
         print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timeStamp]: {}"
               .format(request_id, status, time_stamp))
         for ld in level_delay_list:
@@ -752,7 +789,7 @@ def show_details_ecid(receive_message: str):
     except KeyError:
         print("ERROR! Unknown queryType")
     request_id = receive_message[10:18]
-    time_stamp = receive_message[18:26]
+    time_stamp = hex_ms_tm_to_real(receive_message[18:26])
     num = int(receive_message[26:30], 16)
     index = 30
     print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timestamp]: {}".format(request_id,
@@ -761,30 +798,34 @@ def show_details_ecid(receive_message: str):
     print("[resolving_entry_number]: {}".format(num))
     if query_type == "00":
         for i in range(num):
-            print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + EID_STR_LEN],
-                                                receive_message[index + EID_STR_LEN:index + EID_NA_STR_LEN]))
+            eid = receive_message[index:index + EID_STR_LEN]
+            na = na_to_ip(receive_message[index + EID_STR_LEN:index + EID_NA_STR_LEN])
+            print("[{}] EID: {}, NA: {}".format(i, eid, na))
             index += EID_NA_STR_LEN
     elif query_type == "01":
         for i in range(num):
-            print("[{}] EID: {}, CID: {}".format(i, receive_message[index:index + EID_STR_LEN],
-                                                 receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN]))
+            eid = receive_message[index:index + EID_STR_LEN]
+            cid = receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN]
+            print("[{}] EID: {}, CID: {}".format(i, eid, cid))
             index += EID_CID_STR_LEN
     elif query_type == "02":
         for i in range(num):
-            print("[{}] CID: {}, NA: {}".format(i, receive_message[index:index + CID_STR_LEN],
-                                                receive_message[index + CID_STR_LEN:index + CID_NA_STR_LEN]))
+            cid = receive_message[index:index + CID_STR_LEN]
+            na = na_to_ip(receive_message[index + CID_STR_LEN:index + CID_NA_STR_LEN])
+            print("[{}] CID: {}, NA: {}".format(i, cid, na))
             index += EID_CID_STR_LEN
     elif query_type == "03" or query_type == "04":
         for i in range(num):
-            print("[{}] EID: {}, CID: {}, NA: {}".format(i, receive_message[index:index + EID_STR_LEN],
-                                                         receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN],
-                                                         receive_message[
-                                                         index + EID_CID_STR_LEN:index + EID_CID_NA_STR_LEN]))
+            eid = receive_message[index:index + EID_STR_LEN]
+            cid = receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN]
+            na = na_to_ip(receive_message[index + EID_CID_STR_LEN:index + EID_CID_NA_STR_LEN])
+            print("[{}] EID: {}, CID: {}, NA: {}".format(i, eid, cid, na))
             index += EID_CID_NA_STR_LEN
     elif query_type == "05":
         for i in range(num):
-            print("[{}] CID: {}, EID: {}".format(i, receive_message[index + EID_STR_LEN:index + EID_CID_STR_LEN],
-                                                 receive_message[index:index + EID_STR_LEN]))
+            cid = receive_message[index:index + CID_STR_LEN]
+            eid = receive_message[index + CID_STR_LEN:index + EID_STR_LEN]
+            print("[{}] CID: {}, EID: {}".format(i, cid, eid))
             index += EID_CID_STR_LEN
 
 
@@ -794,7 +835,7 @@ def show_details_cc_query(receive_message: str):
         request_id = receive_message[2:10]
         status_dict = {"01": "resolve_successful", "00": "resolve_failed"}
         status = status_dict[receive_message[10:12]]
-        time_stamp = receive_message[12:20]
+        time_stamp = hex_ms_tm_to_real(receive_message[12:20])
         num = int(receive_message[20:22], 16)
         index = 22
         print("=== response details ===:\n[request_id]: {}, [resolve status]: {}, [timestamp]: {}".format(request_id,
@@ -802,8 +843,9 @@ def show_details_cc_query(receive_message: str):
                                                                                                           time_stamp))
         print("[resolving_entry_number]: {}".format(num))
         for i in range(num):
-            print("[{}] EID: {}, NA: {}".format(i, receive_message[index:index + 40],
-                                                receive_message[index + 40:index + 72]))
+            eid = receive_message[index:index + EID_STR_LEN]
+            na = na_to_ip(receive_message[index + EID_STR_LEN:index + EID_NA_STR_LEN])
+            print("[{}] EID: {}, NA: {}".format(i, eid, na))
             index += 72
 
 
