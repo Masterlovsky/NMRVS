@@ -79,37 +79,16 @@ class SEAHash(object):
 
 def ip2NAStr(ip: str) -> str:
     # Handle IP addresses, discuss IPv6 and IPv4 separately, and return directly if it is already NA_STR
-    result = ""
-    if ip == "":
+    result = ip
+    try:
+        ipaddr = ipaddress.ip_address(ip)
+        if ipaddr.version == 4:
+            result = "0" * 24 + hex(int(ipaddr))[2:].zfill(8)
+        elif ipaddr.version == 6:
+            result = ipaddr.exploded.replace(":", "")
         return result
-    if ":" in ip:
-        key_len = len(ip.split(":"))
-        if key_len > 8:
-            print("IP addr input error!")
-            return ""
-        elif key_len < 8:
-            index = ip.find("::")
-            ip = ip[0:index + 1] + "0:" * (8 - key_len + 1) + ip[index + 2:]
-        na_list = ip.split(":")
-        for i in na_list:
-            if len(i) < 4:
-                result += '0' * (4 - len(i)) + i
-            else:
-                result += i
-    elif "." in ip:
-        node_na_list = ip.split(".")
-        if len(node_na_list) != 4:
-            print("IPv4 addr input error!")
-            return ""
-        for i in node_na_list:
-            if int(i) < 0 or int(i) > 255:
-                print("IP addr input error!")
-                return ""
-            result += hex(int(i))[2:].zfill(2)
-        result = "0" * 24 + result
-    else:
-        result = ip
-    return result
+    except ValueError:
+        return result
 
 
 def na_to_ip(na_str: str) -> str:
